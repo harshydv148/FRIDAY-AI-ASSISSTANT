@@ -6,10 +6,18 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastmcp",
+    "google-genai>=1.70.0",
+    "google-generativeai>=0.8.6",
+    "groq>=1.2.0",
+    "gtts>=2.5.4",
     "httpx",
     "livekit-agents[deepgram,groq,openai,sarvam,silero]>=1.5.1",
     "livekit-plugins-google>=1.5.1",
+    "pyaudio>=0.2.14",
+    "pygame>=2.6.1",
     "python-dotenv",
+    "pyttsx3>=2.99",
+    "speechrecognition>=3.16.1",
 ]
 
 [project.scripts]

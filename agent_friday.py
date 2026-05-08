@@ -29,11 +29,11 @@ from livekit.plugins import google as lk_google, openai as lk_openai, sarvam, si
 # ---------------------------------------------------------------------------
 
 STT_PROVIDER       = "sarvam"
-LLM_PROVIDER       = "gemini"
+LLM_PROVIDER       = "openai"
 TTS_PROVIDER       = "openai"
 
 GEMINI_LLM_MODEL   = "gemini-2.5-flash"
-OPENAI_LLM_MODEL   = "gpt-4o"
+OPENAI_LLM_MODEL = "llama-3.1-8b-instant"
 
 OPENAI_TTS_MODEL   = "tts-1"
 OPENAI_TTS_VOICE   = "nova"       # "nova" has a clean, confident female tone
