@@ -3,25 +3,50 @@ from dotenv import load_dotenv
 from groq import Groq
 from gtts import gTTS
 import pygame
-import os
 import time
 import speech_recognition as sr
 import webbrowser
 import json
 from datetime import datetime
-
+import uuid
+import sys
+import webbrowser
 import pyautogui
 import pyperclip
 import time
 import pytesseract
-first_start = True
-standby_mode = False
-last_active_time = time.time()
-ACTIVE_DURATION = 20  # seconds
+import mss
+from PIL import Image
 
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Users\Harsh yadav\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+class FridayState:
+    def __init__(self):
+        self.active = False
+        self.last_active = time.time()
+        self.first_start = True
+        self.standby = False
+        self.TIMEOUT = 20
 
+    def wake(self):
+        self.active = True
+        self.standby = False
+        self.last_active = time.time()
+
+    def touch(self):
+        self.last_active = time.time()
+
+    def is_timed_out(self):
+        return time.time() - self.last_active > self.TIMEOUT
+
+    def go_standby(self):
+        self.active = False
+        self.standby = True
+
+state = FridayState()
+
+
+USERNAME = os.getlogin()
+pytesseract.pytesseract.tesseract_cmd = rf"C:\Users\{USERNAME}\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
 # Load environment variables
 load_dotenv()
 
@@ -36,6 +61,28 @@ def load_memory():
 def save_memory(memory):
     with open("memory.json", "w") as f:
         json.dump(memory, f, indent=4)
+
+WEB_APPS = {
+    "youtube": "https://youtube.com",
+    "google": "https://google.com",
+    "github": "https://github.com",
+    "leetcode": "https://leetcode.com",
+    "chatgpt": "https://chat.openai.com",
+    "instagram": "https://instagram.com",
+    "linkedin": "https://linkedin.com",
+    "twitter": "https://twitter.com",
+    "gmail": "https://mail.google.com",
+}
+
+SYSTEM_APPS = {
+    "notepad": "notepad",
+    "vs code": "code",
+    "code": "code",
+    "telegram": "start shell:AppsFolder\\TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store",
+    "calculator": "calc",
+    "paint": "mspaint",
+    "task manager": "taskmgr",
+}
 
 memory = load_memory()
 
@@ -117,54 +164,51 @@ def type_text(text):
     time.sleep(2)  # time to switch window
     pyautogui.write(text, interval=0.02)
 
-# def execute_command(action, target):
-#     target = target.lower()
+def execute_command(action, target):
+    target = target.lower()
 
-#     if action == "open":
+    if action == "open":
 
-#         # 🔥 hardcoded apps first
-#         if target == "instagram":
-#             os.system("start shell:AppsFolder\\Facebook.InstagramBeta_8xx8rvfyw5nnt!App")
-#             speak("Opening Instagram, sir.")
-#             return
+        # 🔥 hardcoded apps first
+        if target == "instagram":
+            os.system("start shell:AppsFolder\\Facebook.InstagramBeta_8xx8rvfyw5nnt!App")
+            speak("Opening Instagram, sir.")
+            return
         
-#         if target == "linkedin":
-#             os.system("start shell:AppsFolder\\7EE7776C.LinkedInforWindows_w1wdnht996qgy!App")
-#             speak("Opening LinkedIn, sir.")
-#             return
+        if target == "linkedin":
+            os.system("start shell:AppsFolder\\7EE7776C.LinkedInforWindows_w1wdnht996qgy!App")
+            speak("Opening LinkedIn, sir.")
+            return
         
-#         if target == "telegram":
-#             os.system("start shell:AppsFolder\\TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store")
-#             speak("Opening Telegram, sir.")
-#             return
+        if target == "telegram":
+            os.system("start shell:AppsFolder\\TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store")
+            speak("Opening Telegram, sir.")
+            return
 
-#         # 🔥 fallback system
-#         os.system(f"start {target}")
-#         speak(f"Opening {target}, sir.")
+        # 🔥 fallback system
+        os.system(f"start {target}")
+        speak(f"Opening {target}, sir.")
 
         
 def speak(text):
     try:
         tts = gTTS(text=text, lang='en')
-        filename = "voice.mp3"
+        filename = f"voice_{uuid.uuid4().hex[:8]}.mp3"
         tts.save(filename)
-
         pygame.mixer.music.load(filename)
         pygame.mixer.music.play()
-
-        # wait until audio finishes
         while pygame.mixer.music.get_busy():
             time.sleep(0.1)
-
         pygame.mixer.music.unload()
         os.remove(filename)
-
     except Exception as e:
         print("Voice error:", e)
-
-
-import mss
-from PIL import Image
+        # cleanup agar file reh gayi ho
+        if os.path.exists(filename):
+            try:
+                os.remove(filename)
+            except:
+                pass
 
 def read_screen():
     with mss.MSS() as sct:
@@ -208,11 +252,7 @@ conversation = [
 print("FRIDAY (type 'exit' to quit)\n")
 print(pytesseract.get_tesseract_version())
 
-is_active = False
-last_active_time = time.time()
-ACTIVE_DURATION = 20
 wake_word = "friday"
-voice_mode = False
 
 while True:
     user_input = listen()
@@ -220,52 +260,40 @@ while True:
     if not user_input:
         continue
     
-    last_active_time = time.time()
+    state.touch()
     print("You:", user_input)
 
-    current_time = time.time()
-
-    #  STANDBY CHECK
-    # if not standby_mode and (current_time - last_active_time > ACTIVE_DURATION):
-    #     standby_mode = True
-    #     print("FRIDAY: (standby mode)")
-
-    if (current_time - last_active_time > ACTIVE_DURATION):
-        standby_mode = True
+    if state.is_timed_out() and not state.standby:
+        state.go_standby()
         print("FRIDAY: (standby mode)")
-        speak("Going on standby mod , Sir")
+        speak("Going on standby, Sir.")
 
+        
     #  WAKE FROM STANDBY
-    if standby_mode:
-        is_active = True
+    if state.standby:
         if any(phrase in user_input.lower() for phrase in [
             "wake up friday",
             "utho friday",
             "kaam ka waqt",
             "chalo utho friday"
         ]):
-            speak("Aapke liye hmesha sir")
+            state.wake()
+            speak("Aapke liye hamesha sir.")
             print("FRIDAY: Aapke liye hamesha sir")
-
-            standby_mode = False
-            last_active_time = time.time()
             continue
         else:
             continue
 
     #  WAKE WORD RESPONSE
     if "friday" in user_input.lower():
-        
-        is_active = True
-        if first_start:
-            speak("Greeting boss, aaj kya krne ka plan hai")
+        state.wake()
+        if state.first_start:
+            speak("Greeting boss, aaj kya krne ka plan hai.")
             print("FRIDAY: Greeting boss, aaj kya krne ka plan hai")
-            first_start = False
+            state.first_start = False
         else:
-            speak("Yes boss, I'm listening")
+            speak("Yes boss, I'm listening.")
             print("FRIDAY: Yes boss, I'm listening")
-
-        last_active_time = time.time()
 
         # remove wake word
         user_input = user_input.lower().replace("friday", "").strip()
@@ -274,13 +302,14 @@ while True:
             continue
     
     #  agar active nahi hai → ignore
-    if not is_active:
+    if not state.active:
         continue
     #  GREETING
+
     if user_input.lower() in ["hello", "hi", "hey"]:
         speak("Hello boss!")
         print("FRIDAY: Hello boss!")
-        last_active_time = time.time()
+        state.touch()
         continue
 
      
@@ -305,7 +334,7 @@ while True:
         if should_speak(reply):
             speak(reply)
 
-        last_active_time = time.time()
+        state.touch()
         continue
 
 
@@ -328,7 +357,7 @@ while True:
         if should_speak(reply):
             speak(reply)
 
-        last_active_time = time.time()
+        state.touch()
         continue
 
 
@@ -364,7 +393,7 @@ while True:
         print("CLEAN SCREEN:\n", clean_text)
 
         speak("I've read the screen, sir.")
-        last_active_time = time.time()
+        state.touch()
         continue
 
 
@@ -385,7 +414,7 @@ while True:
 
         if should_speak(reply):
             speak(reply)
-        last_active_time = time.time()
+        state.touch()
         continue
 
     if user_input.lower().strip() == "exit":
@@ -394,140 +423,123 @@ while True:
         break
 
     #  AUTO MEMORY SAVE
-    memory_response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-    {
-        "role": "system",
-        "content": """
-You are a memory extraction engine.
+    # AUTO MEMORY SAVE - Smart version
+    explicit_keywords = [
+        "remember", "yaad rakh", "save this", "note this",
+        "save karo", "yaad karo", "remember this", "store this",
+        "isey yaad rkhna", "yeh save karo"
+    ]
 
-Your task:
-- Decide if the user's message contains personal information or something important to remember.
-- If yes, return ONLY valid JSON.
+    explicit_save = any(kw in user_input.lower() for kw in explicit_keywords)
 
-Format:
-{"save": true, "key": "age", "value": "19"}
+    should_check_memory = False
 
-If nothing should be remembered:
-{"save": false}
+    if explicit_save:
+        should_check_memory = True
+    else:
+        u = user_input.lower().strip()
+        personal_hints = [
+            "my ", "mera ", "meri ", "i am ", "i'm ", "main hoon",
+            "mera naam", "my name", "my age", "i live", "i like",
+            "i love", "i hate", "my favourite", "my favorite",
+            "mujhe pasand", "mujhe nahi pasand", "i study", "i work",
+            "i am a", "main ek", "my hobby", "my goal", "i want to",
+            "i prefer", "i use", "my city", "my college", "my school"
+        ]
+        if any(hint in u for hint in personal_hints):
+            should_check_memory = True
+        # 4 word condition hatai - ab direct hint check kaafi hai   
 
-Rules:
-- Save personal preferences, identity, goals, dates, habits, relationships, favorites.
-- Save anything user explicitly says to remember.
-- Do NOT save technical questions, coding topics, educational content, or commands.
-- DO NOT explain anything.
-- DO NOT write markdown.
-- DO NOT write code.
-- Output must be valid JSON only.
-"""
-    },
-    {
-        "role": "user",
-        "content": user_input
-    }
-]
-    )
-    mem_reply = memory_response.choices[0].message.content.strip()
+    if should_check_memory:
+        memory_response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """
+    You are a strict memory extraction engine.
 
-    print("RAW MEMORY:", mem_reply)
+    SAVE ONLY when:
+    1. User explicitly says "remember", "yaad rakh", "save this", or similar.
+    2. User states a clear personal fact: their name, age, city, job, goal, relationship, or strong preference.
 
-    #  remove markdown
-    mem_reply = mem_reply.replace("```json", "")
-    mem_reply = mem_reply.replace("```python", "")
-    mem_reply = mem_reply.replace("```", "")
+    NEVER SAVE:
+    - Random numbers without context (like "14", "2006" alone)
+    - Questions the user is asking
+    - Commands (open YouTube, search, etc.)
+    - General knowledge or coding topics
+    - Anything ambiguous or unclear
 
-    #  extract only JSON
-    start = mem_reply.find("{")
-    end = mem_reply.rfind("}") + 1
+    Format if saving:
+    {"save": true, "key": "name", "value": "Harsh"}
 
-    if start == -1 or end == 0:
-        print("INVALID MEMORY OUTPUT")
-        continue
+    Format if not saving:
+    {"save": false}
 
-    mem_reply = mem_reply[start:end]
+    ONLY return JSON. Nothing else.
+    """
+                },
+                {
+                    "role": "user",
+                    "content": user_input
+                }
+            ]
+        )
 
-    print("CLEAN MEMORY:", mem_reply)
-##----------------------------------------------------------------
-    mem_reply = mem_reply.strip()
+        mem_reply = memory_response.choices[0].message.content.strip()
+        mem_reply = mem_reply.replace("```json", "").replace("```python", "").replace("```", "")
 
-    #  code block hatao
-    if mem_reply.startswith("```"):
-        mem_reply = mem_reply.split("```")[1]
+        start = mem_reply.find("{")
+        end = mem_reply.rfind("}") + 1
+        if start != -1 and end != 0:
+            mem_reply = mem_reply[start:end].strip()
+            try:
+                data = json.loads(mem_reply)
+                save_memory_flag = data.get("save")
+                key = data.get("key")
+                value = data.get("value")
 
-    #  extra text hatao (last JSON extract)
-    start = mem_reply.find("{")
-    end = mem_reply.rfind("}") + 1
-
-    if start != -1 and end != -1:
-        mem_reply = mem_reply[start:end]
-
-    try:
-        data = json.loads(mem_reply)
-        save_memory_flag = data.get("save")
-        key = data.get("key")
-        value = data.get("value")
-        
-        if save_memory_flag and key and value:
-            #  ignore invalid
-            if not key or not value:
-                continue
-
-            #  ignore long garbage
-            if len(value) > 100:
-                continue
-
-            #  ignore questions
-            if "?" in user_input:
-                continue
-
-            # #  ignore technical words
-            # blocked_words = ["algorithm", "code", "time complexity", "merge", "python"]
-
-            # if any(word in user_input.lower() for word in blocked_words):
-            #     continue
-
-            memory[key] = value
-            save_memory(memory)
-
-            print("🧠 Saved:", key, "=", value)
-
-            speak(f"Got it boss, I'll remember that.")
-            continue   
-    except Exception as e:
-        print("MEMORY ERROR:", e)
+                if save_memory_flag and key and value:
+                    if len(value) <= 100:
+                        memory[key] = value
+                        save_memory(memory)
+                        print("🧠 Saved:", key, "=", value)
+                        speak("Got it boss, I'll remember that.")
+                        continue
+            except Exception as e:
+                print("MEMORY ERROR:", e)
 
     
-    #  Activate if wake word used
-    if not is_active and wake_word in user_input.lower():
-        is_active = True
-        last_active_time = current_time
-        speak("Yes sir, I'm listening.")
+    # #  Activate if wake word used
+    # if not state.wake() and wake_word in user_input.lower():
+    #     state.wake()
+    #     last_active_time = current_time
+    #     speak("Yes sir, I'm listening.")
 
         # remove wake word
         user_input = user_input.lower().replace(wake_word, "").strip()
 
     #  agar active nahi hai → ignore
-    elif not is_active:
+    elif not state.active:
         continue
 
         # Check timeout
-    if current_time - last_active_time > ACTIVE_DURATION:
-        is_active = False
+    if state.is_timed_out():
+        state.go_standby()
         speak("Going back to standby mode, sir.")
         continue
 
+    state.touch()
+
     #  update active time (VERY IMPORTANT)
-    last_active_time = current_time
+    state.touch()
     
     # if user_input.lower() == "exit":
     #     speak("Goodbye, sir.")
     #     print("FRIDAY: Goodbye, sir.")
     #     break
 
-#-----commands start -------------------------------------------
-    import webbrowser
-    
+#-----commands start -------------------------------------------    
 
     if "day" in user_input.lower() or "date" in user_input.lower():
         now = datetime.now()
@@ -537,18 +549,18 @@ Rules:
 
         speak(f"Today is {day}, {date}, sir.")
         print(f"FRIDAY: Today is {day}, {date}, sir.")
-        last_active_time = time.time()
+        state.touch()
         continue
 
     if user_input.strip().lower() in ["time", "what time is it", "current time"]:
         current_time = datetime.now().strftime("%H:%M")
         speak(f"The time is {current_time}, sir.")
-        last_active_time = time.time()
+        state.touch()
         continue
 
     if "good morning" in user_input.lower():
         speak("Good morning, sir. Hope you're ready to conquer the day.")
-        last_active_time = time.time()
+        state.touch()
         continue
     
     import os
@@ -576,7 +588,7 @@ Rules:
         url = f"https://www.google.com/search?q={query}"
         webbrowser.open(url)
         speak(f"Searching for {query}, sir.")
-        last_active_time = time.time()
+        state.touch()
         continue
 
     # import os
@@ -593,50 +605,45 @@ Rules:
     #     continue
 
 
-    if "open youtube" in user_input.lower():
-        webbrowser.open("https://youtube.com")
-        speak("Opening YouTube, sir.")
-        last_active_time = time.time()
-        continue
+    if user_input.lower().startswith("open"):
+        target = user_input.lower().replace("open", "").strip()
 
-    if "open google" in user_input.lower():
-        webbrowser.open("https://google.com")
-        speak("Opening Google, sir.")
-        last_active_time = time.time()
-        continue
-
-    if "open notepad" in user_input.lower():
-        os.system("notepad")
-        speak("Opening Notepad, sir.")
-        last_active_time = time.time()
-        continue
-
-    # if "open chrome" in user_input.lower():
-    #     os.system("start chrome")
-    #     speak("Opening Chrome, sir.")
-    #     last_active_time = time.time()
-    #     continue
-
-    if "open code" in user_input.lower() or "open vs code" in user_input.lower():
-        os.system("code")
-        speak("Opening VS Code, sir.")
-        last_active_time = time.time()
-        continue
-
-    if "open telegram" in user_input.lower():
-        os.system("start shell:AppsFolder\\TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store")
-        speak("Opening Telegram, sir.")
-        continue
-
-    if "open instagram" in user_input.lower():
-        os.system("start shell:AppsFolder\\Facebook.InstagramBeta_8xx8rvfyw5nnt!App")
-        speak("Opening Instagram, sir.")
-        continue
-
-    if "open linkedin" in user_input.lower():
-        os.system("start shell:AppsFolder\\7EE7776C.LinkedInforWindows_w1wdnht996qgy!App")
-        speak("Opening LinkedIn, sir.")
-        continue
+        if target in WEB_APPS:
+            webbrowser.open(WEB_APPS[target])
+            speak(f"Opening {target}, sir.")
+            state.touch()
+            continue
+        elif target in SYSTEM_APPS:
+            os.system(SYSTEM_APPS[target])
+            speak(f"Opening {target}, sir.")
+            state.touch()
+            continue
+        else:
+            text = target
+            if "from" in text and "folder" in text:
+                parts = text.split("from")
+                file_name = parts[0].strip()
+                folder_name = parts[1].replace("folder", "").strip()
+                file_path = find_file_in_folder(folder_name, file_name)
+                if file_path:
+                    os.startfile(file_path)
+                    speak(f"Opening {file_name} from {folder_name}, sir.")
+                else:
+                    speak(f"I couldn't find {file_name} in {folder_name}, sir.")
+            else:
+                file_path = find_file(text)
+                if file_path:
+                    os.startfile(file_path)
+                    speak(f"Opening {text}, sir.")
+                else:
+                    app_path = find_app(text)
+                    if app_path:
+                        os.startfile(app_path)
+                        speak(f"Opening {text}, sir.")
+                    else:
+                        os.system(f"start {text}")
+                        speak(f"Trying to open {text}, sir.")
+            continue
 
 
     if "study mode" in user_input.lower():
@@ -651,21 +658,21 @@ Rules:
 
         for link in links:
             webbrowser.open_new_tab(link)
-        last_active_time = time.time()
+        state.touch()
         continue
 
 #------OS commands-----
 
     if "open downloads" in user_input.lower():
-        os.startfile("C:\\Users\\Harsh yadav\\Downloads")
+        os.startfile(os.path.expanduser("~\\Downloads"))
         speak("Opening downloads, sir.")
-        last_active_time = time.time()
+        state.touch()
         continue
 
     if "open desktop" in user_input.lower():
-        os.startfile("C:\\Users\\Harsh yadav\\Desktop") 
+        os.startfile(os.path.expanduser("~\\Desktop"))
         speak("Opening desktop, sir.")
-        last_active_time = time.time()
+        state.touch()
         continue
 
     if user_input.lower().startswith("open"):
@@ -705,7 +712,7 @@ Rules:
                 #  CASE 4: fallback (IMPORTANT)
                 os.system(f"start {text}")
                 speak(f"Trying to open {text}, sir.")
-
+                    
         continue
 
 
@@ -720,11 +727,14 @@ Rules:
         continue
     #---------COMMANDS over --------
 
-    # Add user message to memory
-    conversation.append({
-        "role": "user",
-        "content": user_input
-    })
+    # Add user message to history
+    MAX_HISTORY = 10
+    conversation.append({"role": "user", "content": user_input})
+
+    # Sirf last 10 messages rakho, system prompt hamesha rakho
+    if len(conversation) > MAX_HISTORY + 1:
+        conversation = [conversation[0]] + conversation[-(MAX_HISTORY):]
+    
 
     # 🔥 AI INTENT DETECTION
     response = client.chat.completions.create(
