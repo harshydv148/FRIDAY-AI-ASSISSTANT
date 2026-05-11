@@ -66,13 +66,14 @@ WEB_APPS = {
     "youtube": "https://youtube.com",
     "google": "https://google.com",
     "github": "https://github.com",
-    "leetcode": "https://leetcode.com",
-    "chatgpt": "https://chat.openai.com",
+    "problems": "https://leetcode.com",
+    "gpt": "https://chat.openai.com",
     "instagram": "https://instagram.com",
     "linkedin": "https://linkedin.com",
     "twitter": "https://twitter.com",
     "gmail": "https://mail.google.com",
 }
+
 
 SYSTEM_APPS = {
     "notepad": "notepad",
@@ -84,7 +85,257 @@ SYSTEM_APPS = {
     "task manager": "taskmgr",
 }
 
+BROWSER_APPS = {
+    "chrome": r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    "firefox": r"C:\Program Files\Mozilla Firefox\firefox.exe",
+    "brave": r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
+    "edge": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+}
+
+APP_FIRST = {
+            "instagram": {
+                "app": "start shell:AppsFolder\\Facebook.InstagramBeta_8xx8rvfyw5nnt!App",
+                "web": "https://instagram.com"
+            },
+            "whatsapp": {
+                "app": "start shell:AppsFolder\\5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App",
+                "web": "https://web.whatsapp.com"
+            },
+            "telegram": {
+                "app": "start shell:AppsFolder\\TelegramMessengerLLP.TelegramDesktop_t4vj0pshhgkwm!Telegram.TelegramDesktop.Store",
+                "web": "https://web.telegram.org"
+            },
+            "linkedin": {
+                "app": "start shell:AppsFolder\\7EE7776C.LinkedInforWindows_w1wdnht996qgy!App",
+                "web": "https://linkedin.com"
+            },
+            "snapchat": {
+                "app": "start shell:AppsFolder\\CBSInteractive.Snapchat_kzf8qxf38zg5c!App",
+                "web": "https://snapchat.com"
+            },
+            "spotify": {
+                "app": "start shell:AppsFolder\\SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify",
+                "web": "https://open.spotify.com"
+            },
+            "twitter": {
+                "app": "start shell:AppsFolder\\Twitter.Twitter_8xx8rvfyw5nnt!App",
+                "web": "https://twitter.com"
+            },
+            "gpt":{
+                "app": "start shell:AppsFolder\\OpenAI.ChatGPT-Desktop_2p2nqsd0c76g0!ChatGPT",
+                "web": "https://chat.openai.com"
+            },
+        }
+
+
+import psutil
+import os
+
+def get_protected_pids():
+    my_pid = os.getpid()
+    protected = set()
+    
+    try:
+        # Apni poori family tree protect karo
+        me = psutil.Process(my_pid)
+        protected.add(my_pid)
+        
+        # Upar tak — parents
+        try:
+            p = me.parent()
+            while p:
+                protected.add(p.pid)
+                p = p.parent()
+        except:
+            pass
+        
+        # Neeche tak — children
+        try:
+            for c in me.children(recursive=True):
+                protected.add(c.pid)
+        except:
+            pass
+            
+    except:
+        protected.add(my_pid)
+    
+    return protected
+
+
+def get_all_protected_names():
+    """Process names jo kabhi band nahi honge"""
+    return {
+        "code.exe", "code - insiders.exe",
+        "cmd.exe", "powershell.exe", "powershell_ise.exe",
+        "windowsterminal.exe", "wt.exe",
+        "python.exe", "pythonw.exe", "python3.exe",
+        "conhost.exe", "openconsole.exe",
+        "explorer.exe", "taskmgr.exe",
+        "node.exe", "electron.exe",
+        # System critical
+        "system", "smss.exe", "csrss.exe", "wininit.exe",
+        "winlogon.exe", "services.exe", "lsass.exe",
+        "svchost.exe", "dwm.exe", "fontdrvhost.exe",
+        "registry", "tasklist.exe", "taskkill.exe",
+        "sihost.exe", "ctfmon.exe", "spoolsv.exe",
+        "runtimebroker.exe", "dllhost.exe", "audiodg.exe",
+        "searchhost.exe", "searchindexer.exe",
+        "shellexperiencehost.exe", "startmenuexperiencehost.exe",
+        "textinputhost.exe", "applicationframehost.exe",
+        "backgroundtaskhost.exe", "taskhostw.exe",
+        "securityhealthservice.exe", "securityhealthsystray.exe",
+        "msmpeng.exe", "nissrv.exe", "msiexec.exe",
+        "smartscreen.exe", "lockapp.exe",
+    }
+
+
+def close_all_apps():
+    protected_pids = get_protected_pids()
+    protected_names = get_all_protected_names()
+    
+    print(f"🛡️ My PID chain: {protected_pids}")
+    
+    closed = []
+    skipped = []
+    
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            pid = proc.info['pid']
+            name = proc.info['name'].lower()
+            
+            # PID protected hai?
+            if pid in protected_pids:
+                skipped.append(f"{name}({pid})")
+                continue
+            
+            # Name protected hai?
+            if name in protected_names:
+                continue
+                
+            # Band karo
+            proc.kill()
+            closed.append(name)
+            
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        except Exception as e:
+            continue
+    
+    print(f"✅ Closed: {list(set(closed))}")
+    print(f"🛡️ Skipped (protected): {skipped}")
+    
+    if closed:
+        speak("All background apps closed, sir.")
+    else:
+        speak("No apps to close, sir.")
+
+
+def close_specific_apps(app_names_to_keep: list):
+    protected_pids = get_protected_pids()
+    protected_names = get_all_protected_names()
+    
+    APP_ALIASES = {
+        "calculator": ["calc.exe", "calculator.exe", "calculatorapp.exe"],
+        "chrome": ["chrome.exe"],
+        "firefox": ["firefox.exe"],
+        "spotify": ["spotify.exe"],
+        "discord": ["discord.exe"],
+        "telegram": ["telegram.exe"],
+        "vlc": ["vlc.exe"],
+        "notepad": ["notepad.exe"],
+        "word": ["winword.exe"],
+        "excel": ["excel.exe"],
+        "whatsapp": ["whatsapp.exe"],
+        "zoom": ["zoom.exe"],
+        "obs": ["obs64.exe", "obs.exe"],
+        "steam": ["steam.exe"],
+        "brave": ["brave.exe"],
+        "edge": ["msedge.exe"],
+    }
+    
+    user_protected = [a.lower().strip() for a in app_names_to_keep]
+    
+    closed = []
+    
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            pid = proc.info['pid']
+            name = proc.info['name'].lower()
+            
+            if pid in protected_pids:
+                continue
+                
+            if name in protected_names:
+                continue
+            
+            # User ke specified apps skip karo
+            skip = False
+            for u_app in user_protected:
+                aliases = APP_ALIASES.get(u_app, [u_app + ".exe", u_app])
+                if any(alias.lower() in name for alias in aliases):
+                    skip = True
+                    break
+            
+            if skip:
+                continue
+            
+            proc.kill()
+            closed.append(name)
+            
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        except Exception:
+            continue
+    
+    kept = ', '.join(app_names_to_keep)
+    print(f"✅ Closed all except: {kept}")
+    speak(f"Done sir, kept {kept} running.")
+
+
+def close_all_tabs():
+    """Chrome gracefully close karo"""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ['tasklist', '/FI', 'IMAGENAME eq chrome.exe'],
+            capture_output=True, text=True
+        )
+        if 'chrome.exe' not in result.stdout.lower():
+            speak("Chrome is not running, sir.")
+            return
+            
+        subprocess.run(
+            ['powershell', '-command',
+             '$wshell = New-Object -ComObject wscript.shell; '
+             'Get-Process chrome | ForEach-Object { $_.CloseMainWindow() }'],
+            capture_output=True, timeout=5
+        )
+        speak("Chrome closed, sir.")
+    except Exception as e:
+        print("Chrome close error:", e)
+        speak("Couldn't close Chrome, sir.")
+
+def close_current_tab():
+    import pyautogui
+    try:
+        pyautogui.hotkey('ctrl', 'w')
+        speak("Tab closed, sir.")
+    except Exception as e:
+        print("Tab close error:", e)
+
+def close_current_window():
+    import pyautogui
+    try:
+        pyautogui.hotkey('alt', 'f4')
+        speak("Window closed, sir.")
+    except Exception as e:
+        print("Window close error:", e)
+
 memory = load_memory()
+
+def refresh_memory():
+    global memory
+    memory = load_memory()
 
 # Initialize Groq client
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -211,34 +462,83 @@ def speak(text):
                 pass
 
 def read_screen():
+    import re
     with mss.MSS() as sct:
         monitor = sct.monitors[1]
-
-        # 🔥 CUSTOM AREA (adjust kar sakta hai)
-        region = {
-            "top": 100,
-            "left": 0,
-            "width": 1200,
-            "height": 800
-        }
-
-        screenshot = sct.grab(region)
-
+        screenshot = sct.grab(monitor)
         img = Image.frombytes("RGB", screenshot.size, screenshot.rgb)
+        img = img.convert("L")
+        raw_text = pytesseract.image_to_string(img)
 
-        text = pytesseract.image_to_string(img)
+        clean_lines = []
+        for line in raw_text.split("\n"):
+            line = line.strip()
 
-        return text
+            # Too short
+            if len(line) < 8:
+                continue
+
+            # Has file extension — title bar
+            if re.search(r'\b\w+\.(txt|py|pdf|docx|xlsx|jpg|png|mp4|exe|json)\b', line, re.IGNORECASE):
+                continue
+
+            # Menu bar — 2+ menu words
+            menu_words = {"file", "edit", "view", "insert", "format",
+                         "tools", "help", "window", "ht", "h1", "bis"}
+            line_words_lower = set(line.lower().split())
+            if len(line_words_lower.intersection(menu_words)) >= 2:
+                continue
+
+            # Status bar — Ln, Col, UTF, CRLF
+            if re.search(r'\bLn\b|\bCol\b|\bUTF\b|\bCRLF\b|\bENG\b', line):
+                continue
+
+            # Has % — status bar
+            if "%" in line:
+                continue
+
+            # Temperature
+            if re.search(r'\d+°', line):
+                continue
+
+            # Weather
+            if any(w in line.lower() for w in ["sunny", "cloudy", "rainy", "windy", "humid"]):
+                continue
+
+            # Date pattern — 11-05-2026
+            if re.search(r'\d{2}-\d{2}-\d{4}', line):
+                continue
+
+            # Too many symbols
+            symbol_count = sum(1 for c in line if c in '@*#^~`[]{}|\\<>()°©®™$&_+=/')
+            if symbol_count > 2:
+                continue
+
+            # Low alpha ratio
+            alpha_ratio = sum(c.isalpha() for c in line) / len(line)
+            if alpha_ratio < 0.5:
+                continue
+
+            # Taskbar line — Q Search
+            if line.lower().startswith("q "):
+                continue
+
+            clean_lines.append(line)
+
+        clean_text = "\n".join(clean_lines).strip()
+        return clean_text
 
 def should_speak(text):
-    # ❌ code detect
-    if "def " in text or "class " in text:
+    # Code blocks mat bolo
+    if "```" in text:
         return False
-    
-    # ❌ bohot bada text
-    if len(text) > 300:
+    # Pure code detect karo
+    code_lines = sum(1 for line in text.split('\n') 
+                    if line.strip().startswith(('def ', 'class ', 'import ', 
+                                               'for ', 'if ', 'while ', '#')))
+    if code_lines > 3:
         return False
-
+    # Bohot lamba text truncate karke bolo
     return True
     
 # Conversation memory (WITH personality)
@@ -316,104 +616,176 @@ while True:
     current_time = time.time()
     
     #  EXPLAIN SCREEN
-    if "explain" in user_input.lower() and "screen" in user_input.lower():
-        screen_text = read_screen()
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": "Explain this text in simple terms"},
-                {"role": "user", "content": screen_text}
-            ]
-        )
-
-        reply = response.choices[0].message.content
-
-        print("FRIDAY:", reply)
-
-        if should_speak(reply):
-            speak(reply)
-
+    # SCREEN COMMANDS - order matters!
+    
+    # Sirf "explain" ya "summarize" akela aaye — ignore karo
+    solo_words = {
+        "explain": "explain screen bolo boss.",
+        "summarize": "summarise screen bolo boss.",
+        "summarise": "summarise screen bolo boss.",
+        "professional": "make screen professional bolo boss.",
+        "read": "read screen bolo boss.",
+        "bright": "Kya karna hai boss? Thoda clear karo.",
+        "screen": "Kya karna hai screen ke saath boss? Explain, summarise, ya professional?",
+    }
+    if user_input.lower().strip() in solo_words:
+        speak(solo_words[user_input.lower().strip()])
         state.touch()
         continue
 
 
-    #  MAKE SCREEN PROFESSIONAL
+    summarise_triggers = [
+        "summarize screen", "summarise screen",
+        "summarize the screen", "summarise the screen",
+        "screen summarize", "screen summarise",
+        "screen ko summarize", "screen summary"
+    ]
+    if any(t in user_input.lower() for t in summarise_triggers):
+        screen_text = read_screen()
+        if not screen_text.strip():
+            speak("Screen pe kuch readable nahi mila boss.")
+            state.touch()
+            continue
+            
+        sum_response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """
+You are a voice assistant. Summarize the screen content.
+STRICT RULES:
+- Summarize ONLY what is written in the text provided.
+- Do NOT use any memory or personal info about the user.
+- Do NOT mention file names, menus, or UI elements.
+- 2 sentences max.
+- Start with "Boss,"
+- Speak naturally, no bullet points.
+"""
+                },
+                {
+                    "role": "user",
+                    "content": f"Summarize this screen content:\n\n{screen_text}"
+                }
+            ]
+        )
+        reply = sum_response.choices[0].message.content
+        sentences = [s.strip() for s in reply.replace('\n', ' ').split('.') if s.strip()]
+        short_reply = '. '.join(sentences[:2]) + '.' if sentences else reply
+        print("FRIDAY:", short_reply)
+        speak(short_reply)
+        state.touch()
+        continue
+
+    explain_triggers = [
+        "explain screen", "plain screen", "a plane screen",
+        "explain the screen", "screen explain", "screen ko explain",
+        "bright screen", "screen bright",  # speech recognition variations
+        "screen batao", "screen kya hai", "screen dekho"
+    ]
+    if any(t in user_input.lower() for t in explain_triggers):
+        screen_text = read_screen()
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": """
+You are a voice assistant. Explain what you see in this screen text.
+Rules:
+- Speak naturally, no bullet points, no lists, no markdown.
+- STRICT 2 sentences only — no more.
+- Don't say words like "corrupted", "truncated", "incomplete".
+- Just describe what the content is about simply.
+- Start with "Boss," 
+- Example: "Boss, this looks like a resume belonging to Harsh, a BCA student who enjoys cricket and programming."
+"""},
+                {"role": "user", "content": screen_text}
+            ]
+        )
+        reply = response.choices[0].message.content
+        print("FRIDAY:", reply)
+        if should_speak(reply):
+            # Pehli 2 sentences nikalo
+            sentences = [s.strip() for s in reply.replace('\n', ' ').split('.') if s.strip()]
+            short_reply = '. '.join(sentences[:2]) + '.' if sentences else reply
+            speak(short_reply)
+            print("FRIDAY (spoken):", short_reply)
+        state.touch()
+        continue
+
+    print(f"DEBUG: user_input='{user_input}', professional={('professional' in user_input.lower())}, screen={('screen' in user_input.lower())}")
     if "professional" in user_input.lower() and "screen" in user_input.lower():
         screen_text = read_screen()
-
+        print("📄 SCREEN TEXT GOING TO LLM:\n", screen_text)
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "Rewrite this text in a professional tone"},
-                {"role": "user", "content": screen_text}
-            ]
-        )
+                {"role": "system", "content": """
+                You are a professional writing assistant.
+                Your ONLY job: rewrite the text the user gives you in a professional tone.
 
+                STRICT RULES:
+                    - Rewrite EACH AND EVERY line/sentence from the input.
+                    - Do NOT skip any line, any name, any fact.
+                    - Do NOT summarize — rewrite fully.
+                    - Do NOT add any intro like "Here is..." or "The following..."
+                    - Output ONLY the rewritten professional text. Nothing else.
+
+                Example:
+                Input:
+                My name is Harsh. I am a BCA student.
+                I like cricket and programming.
+
+                Output:
+                My name is Harsh, and I am currently pursuing a Bachelor of Computer Applications (BCA) degree.
+                I have a keen interest in cricket and computer programming.
+                """},
+                        {"role": "user", "content": f"Rewrite this text professionally, every single line:\n\n{screen_text}"}
+                    ]
+                )
         reply = response.choices[0].message.content
-
         print("FRIDAY:", reply)
-
         if should_speak(reply):
-            speak(reply)
-
+            sentences = [s.strip() for s in reply.replace('\n', ' ').split('.') if s.strip()]
+            short_reply = '. '.join(sentences[:2]) + '.' if sentences else reply
+            speak(short_reply)
+            print("FRIDAY (spoken):", short_reply)
+        
+        # Notepad mein paste karo
+        import pygetwindow as gw
+        import time
+        
+        # Notepad window dhundho
+        notepad_windows = [w for w in gw.getAllWindows() 
+                          if 'notepad' in w.title.lower() or '.txt' in w.title.lower()]
+        
+        if notepad_windows:
+            notepad_windows[0].activate()
+            time.sleep(0.8)  # window focus hone do
+            
+            # Pehle sab select karo phir delete karo
+            pyautogui.hotkey('ctrl', 'a')
+            time.sleep(0.3)
+            pyautogui.press('delete')
+            time.sleep(0.2)
+            
+            # Poora reply clipboard mein daalo aur paste karo
+            pyperclip.copy(reply)
+            time.sleep(0.2)
+            pyautogui.hotkey('ctrl', 'v')
+            time.sleep(0.3)
+            
+            speak("Done boss, notepad updated.")
+        else:
+            speak("Notepad nahi mili boss, manually paste karo — Ctrl V.")
+            pyperclip.copy(reply)
+        
         state.touch()
         continue
 
-
-    if "screen" in user_input.lower():
+    if "read screen" in user_input.lower() or "screen padho" in user_input.lower():
         screen_text = read_screen()
-
-        #  CLEAN FILTER
-        clean_lines = []
-
-        for line in screen_text.split("\n"):
-            line = line.strip()
-
-            if len(line) < 5:
-                continue
-
-            # ❌ UI garbage words
-            if any(word in line.lower() for word in [
-                "file", "edit", "view", "windows", "utf", "ln", "col",
-                "%", "°", "eng", "start", "merge"
-            ]):
-                continue
-
-         #  random gibberish (too many weird chars)
-            #  gibberish hata (alphabet ratio check)
-            alpha_ratio = sum(c.isalpha() for c in line) / len(line)
-            if alpha_ratio < 0.5:
-                continue
-
-            clean_lines.append(line)
-
-        clean_text = "\n".join(clean_lines)
-
-        print("CLEAN SCREEN:\n", clean_text)
-
+        print("CLEAN SCREEN:\n", screen_text)
         speak("I've read the screen, sir.")
-        state.touch()
-        continue
-
-
-    if "summarize screen" in user_input.lower():
-        screen_text = read_screen()
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": "Summarize this text"},
-                {"role": "user", "content": screen_text}
-            ]
-        )
-
-        reply = response.choices[0].message.content
-
-        print("FRIDAY:", reply)
-
-        if should_speak(reply):
-            speak(reply)
         state.touch()
         continue
 
@@ -440,11 +812,13 @@ while True:
         u = user_input.lower().strip()
         personal_hints = [
             "my ", "mera ", "meri ", "i am ", "i'm ", "main hoon",
-            "mera naam", "my name", "my age", "i live", "i like",
-            "i love", "i hate", "my favourite", "my favorite",
-            "mujhe pasand", "mujhe nahi pasand", "i study", "i work",
-            "i am a", "main ek", "my hobby", "my goal", "i want to",
-            "i prefer", "i use", "my city", "my college", "my school"
+            "mera naam", "my name", "my age", "i live",
+            "i like ", "i love ", "i hate ", "i enjoy ", "i prefer ",
+            "my favourite", "my favorite", "mujhe pasand", "mujhe nahi pasand",
+            "i study", "i work", "i am a", "main ek",
+            "my hobby", "my goal", "i want to", "i use",
+            "my city", "my college", "my school", "i play", "i watch",
+            "mera favourite", "meri favourite", "mujhe ", "i don't like"
         ]
         if any(hint in u for hint in personal_hints):
             should_check_memory = True
@@ -457,27 +831,63 @@ while True:
                 {
                     "role": "system",
                     "content": """
-    You are a strict memory extraction engine.
+You are a memory extraction engine for a personal AI assistant.
 
-    SAVE ONLY when:
-    1. User explicitly says "remember", "yaad rakh", "save this", or similar.
-    2. User states a clear personal fact: their name, age, city, job, goal, relationship, or strong preference.
+Your ONLY job: decide if this message contains a personal fact about the user.
 
-    NEVER SAVE:
-    - Random numbers without context (like "14", "2006" alone)
-    - Questions the user is asking
-    - Commands (open YouTube, search, etc.)
-    - General knowledge or coding topics
-    - Anything ambiguous or unclear
+ALWAYS SAVE these patterns (save: true):
+- "I like X" → favourite or preference
+- "I love X" → favourite or preference  
+- "I hate X" → dislike
+- "I enjoy X" → hobby or preference
+- "I play X" → hobby
+- "I watch X" → hobby
+- "I am X years old" → age
+- "I am a X" → education or job
+- "I work at X" → job
+- "I live in X" → city
+- "My name is X" → name
+- "I study X" → education
+- "My favourite X is Y" → favourite_X
+- "I prefer X" → preference
+- "mujhe X pasand hai" → favourite or preference
+- "mera X hai" → personal info
+- "remember X" → whatever X is
 
-    Format if saving:
-    {"save": true, "key": "name", "value": "Harsh"}
+NEVER SAVE:
+- Pure questions ("what is", "how to", "why")
+- Commands ("open", "search", "play")
+- Random numbers with no context ("14", "2006")
+- General knowledge ("what is python")
 
-    Format if not saving:
-    {"save": false}
+KEY NAMING - always specific:
+- like/love food → "favourite_food"
+- like/love sport → "favourite_sport"  
+- like/love music/artist/song → "favourite_music"
+- like/love movie → "favourite_movie"
+- like/love colour → "favourite_colour"
+- like/love game → "favourite_game"
+- hobby/enjoy/play → "hobby"
+- age → "age"
+- city/live in → "city"
+- name → "name"
+- job/work → "job"
+- education/student → "education"
+- hate/dislike → "dislike"
 
-    ONLY return JSON. Nothing else.
-    """
+Examples:
+"I like burger" → {"save": true, "key": "favourite_food", "value": "burger"}
+"I like burgers" → {"save": true, "key": "favourite_food", "value": "burger"}
+"I love cricket" → {"save": true, "key": "favourite_sport", "value": "cricket"}
+"I am 19 years old" → {"save": true, "key": "age", "value": "19"}
+"I am a BCA student" → {"save": true, "key": "education", "value": "BCA student"}
+"open youtube" → {"save": false}
+"what is python" → {"save": false}
+"2006" → {"save": false}
+"I like playing games" → {"save": true, "key": "hobby", "value": "playing games"}
+
+Return ONLY valid JSON. No explanation. No extra text.
+"""
                 },
                 {
                     "role": "user",
@@ -487,6 +897,7 @@ while True:
         )
 
         mem_reply = memory_response.choices[0].message.content.strip()
+        print("🔍 RAW MEMORY RESPONSE:", mem_reply)
         mem_reply = mem_reply.replace("```json", "").replace("```python", "").replace("```", "")
 
         start = mem_reply.find("{")
@@ -503,33 +914,16 @@ while True:
                     if len(value) <= 100:
                         memory[key] = value
                         save_memory(memory)
+                        refresh_memory()
                         print("🧠 Saved:", key, "=", value)
-                        speak("Got it boss, I'll remember that.")
+                        speak(f"Got it boss, I'll remember that your {key} is {value}.")
                         continue
+                    
+                # LLM ne save=false kaha matlab personal info nahi thi
+                # Normal AI response pe jaane do, continue mat karo
+                        
             except Exception as e:
                 print("MEMORY ERROR:", e)
-
-    
-    # #  Activate if wake word used
-    # if not state.wake() and wake_word in user_input.lower():
-    #     state.wake()
-    #     last_active_time = current_time
-    #     speak("Yes sir, I'm listening.")
-
-        # remove wake word
-        user_input = user_input.lower().replace(wake_word, "").strip()
-
-    #  agar active nahi hai → ignore
-    elif not state.active:
-        continue
-
-        # Check timeout
-    if state.is_timed_out():
-        state.go_standby()
-        speak("Going back to standby mode, sir.")
-        continue
-
-    state.touch()
 
     #  update active time (VERY IMPORTANT)
     state.touch()
@@ -552,61 +946,174 @@ while True:
         state.touch()
         continue
 
-    if user_input.strip().lower() in ["time", "what time is it", "current time"]:
-        current_time = datetime.now().strftime("%H:%M")
-        speak(f"The time is {current_time}, sir.")
+    time_triggers = [
+        "time", "what time", "current time", "kitne baje",
+        "time kya", "kya time", "time kya hai", "time kya hua",
+        "time batao", "time bolo", "abhi kitne baje hain",
+        "what's the time", "baje hain"
+    ]
+    if any(t in user_input.lower() for t in time_triggers):
+        now = datetime.now()
+        hour = now.strftime("%I")
+        minute = now.strftime("%M")
+        ampm = now.strftime("%p")
+        speak(f"It's {hour}:{minute} {ampm}, boss.")
+        state.touch()
+        continue
+    
+    if user_input.lower().startswith("type "):
+        type_request = user_input[5:].strip()
+        
+        type_response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """
+You are a writing assistant. User will ask you to type something.
+Generate the appropriate content based on the request.
+
+RULES:
+- If user says "type merge sort" → write the full merge sort algorithm with code
+- If user says "type a mail to boss" → write a professional email
+- If user says "type selection sort" → write selection sort code
+- If user says "type an apology letter" → write a full apology letter
+- Just output the content directly — no explanation, no intro like "Here is..."
+- Output only what should be typed, nothing else.
+"""
+                },
+                {
+                    "role": "user",
+                    "content": f"Type this for me: {type_request}"
+                }
+            ]
+        )
+        
+        generated_text = type_response.choices[0].message.content
+        print("FRIDAY (typing):", generated_text[:100], "...")
+        speak(f"Typing {type_request} for you, boss.")
+        time.sleep(1)
+        paste_text(generated_text)
         state.touch()
         continue
 
     if "good morning" in user_input.lower():
-        speak("Good morning, sir. Hope you're ready to conquer the day.")
+        speak("Good morning boss! Hope you're ready to conquer the day.")
+        state.touch()
+        continue
+
+    if "good evening" in user_input.lower():
+        speak("Good evening boss! What are we working on tonight?")
+        state.touch()
+        continue
+
+    if "good night" in user_input.lower():
+        speak("Good night boss! Get some rest.")
+        state.touch()
+        continue
+
+    if "good afternoon" in user_input.lower():
+        speak("Good afternoon boss! What can I do for you?")
         state.touch()
         continue
     
     import os
 
-#-----APPS COMMANDS-------------->
-
-    import subprocess
-
-    # if user_input.lower().startswith("open"):
-    #     app_name = user_input.lower().replace("open", "").strip()
-
-    #     app_path = find_app(app_name)
-
-    #     if app_path:
-    #         os.startfile(app_path)
-    #         speak(f"Opening {app_name}, sir.")
-    #     else:
-    #         speak(f"I couldn't find {app_name}, sir.")
-
-    #     continue
 
 #---------Websiteee search commands--------->
-    if "search" in user_input.lower():
-        query = user_input.lower().replace("search", "")
-        url = f"https://www.google.com/search?q={query}"
-        webbrowser.open(url)
-        speak(f"Searching for {query}, sir.")
-        state.touch()
-        continue
-
-    # import os
-
-    # if user_input.lower().startswith("open"):
-    #     app_name = user_input.lower().replace("open", "").strip()
-
-    #     try:
-    #         os.system(f"start {app_name}")
-    #         speak(f"Opening {app_name}, sir.")
-    #     except:
-    #         speak(f"Sorry sir, I couldn't find {app_name}.")
-    
-    #     continue
-
 
     if user_input.lower().startswith("open"):
         target = user_input.lower().replace("open", "").strip()
+
+        if not target:
+            speak("Kya kholna hai boss?")
+            state.touch()
+            continue
+
+        # 1. Browser direct path se kholo
+        if target in BROWSER_APPS:
+            browser_path = BROWSER_APPS[target]
+            if os.path.exists(browser_path):
+                os.startfile(browser_path)
+                speak(f"Opening {target}, boss.")
+            else:
+                os.system(f"start {target}")
+                speak(f"Opening {target}, boss.")
+            state.touch()
+            continue
+
+        # 2. Store apps / APP_FIRST
+        if target in APP_FIRST:
+            app_cmd = APP_FIRST[target]["app"]
+            web_url = APP_FIRST[target]["web"]
+            try:
+                result = os.system(app_cmd)
+                if result != 0:
+                    webbrowser.open(web_url)
+                    speak(f"App nahi mili, opening {target} in browser, boss.")
+                else:
+                    speak(f"Opening {target}, boss.")
+            except:
+                webbrowser.open(web_url)
+                speak(f"Opening {target} in browser, boss.")
+            state.touch()
+            continue
+
+        # 3. Web apps
+        if target in WEB_APPS:
+            webbrowser.open(WEB_APPS[target])
+            speak(f"Opening {target}, boss.")
+            state.touch()
+            continue
+
+        # 4. System apps
+        if target in SYSTEM_APPS:
+            os.system(SYSTEM_APPS[target])
+            speak(f"Opening {target}, boss.")
+            state.touch()
+            continue
+
+        # 5. Common apps — file search mat karo
+        common_apps = {
+            "chrome", "firefox", "edge", "brave", "spotify",
+            "discord", "telegram", "whatsapp", "instagram",
+            "notepad", "calculator", "paint", "zoom", "vlc",
+            "steam", "obs", "word", "excel"
+        }
+
+        if target not in common_apps:
+            # File dhundho
+            if "from" in target and "folder" in target:
+                parts = target.split("from")
+                file_name = parts[0].strip()
+                folder_name = parts[1].replace("folder", "").strip()
+                file_path = find_file_in_folder(folder_name, file_name)
+                if file_path:
+                    os.startfile(file_path)
+                    speak(f"Opening {file_name}, boss.")
+                    state.touch()
+                    continue
+            
+            file_path = find_file(target)
+            if file_path:
+                os.startfile(file_path)
+                speak(f"Opening {target}, boss.")
+                state.touch()
+                continue
+
+        # 6. find_app se dhundho — common apps ke liye bhi
+        app_path = find_app(target)
+        if app_path:
+            os.startfile(app_path)
+            speak(f"Opening {target}, boss.")
+            state.touch()
+            continue
+
+        # 7. Last fallback
+        os.system(f"start {target}")
+        speak(f"Trying to open {target}, boss.")
+        state.touch()
+        continue
 
         if target in WEB_APPS:
             webbrowser.open(WEB_APPS[target])
@@ -715,7 +1222,55 @@ while True:
                     
         continue
 
+# CLOSE ALL TABS - Chrome ke saare tabs band karo
+    if "close all tab" in user_input.lower():
+        u = user_input.lower()
+        has_except = "except" in u or "accept" in u or "but not" in u or "keep" in u
 
+        if has_except:
+            for splitter in ["except", "accept", "but not", "keep"]:
+                if splitter in u:
+                    except_part = u.split(splitter)[-1].strip()
+                    break
+            # Tab command mein except ka matlab specific browser
+            if "firefox" in except_part:
+                speak("Closing Chrome tabs only, keeping Firefox, sir.")
+                close_all_tabs()
+            elif "chrome" in except_part:
+                speak("Chrome is the only browser I manage tabs for, sir.")
+            else:
+                close_all_tabs()
+        else:
+            close_all_tabs()
+
+        state.touch()
+        continue
+
+    # CLOSE ALL APPS - except VS Code aur terminal
+    if "close all app" in user_input.lower():
+        u = user_input.lower()
+        
+        # "accept" bhi sun lo kyunki speech recognition "except" ko "accept" sunta hai
+        has_except = "except" in u or "accept" in u or "but not" in u or "keep" in u
+        
+        if has_except:
+            # jo bhi word use hua ho usse split karo
+            for splitter in ["except", "accept", "but not", "keep"]:
+                if splitter in u:
+                    except_part = u.split(splitter)[-1].strip()
+                    break
+            # "and" se split karo multiple apps ke liye
+            keep_apps = [
+                app.strip() 
+                for app in except_part.replace(" and ", ",").split(",")
+                if app.strip()
+            ]
+            close_specific_apps(keep_apps)
+        else:
+            close_all_apps()
+        
+        state.touch()
+        continue
     if "shutdown" in user_input.lower():
         speak("Shutting down the system, sir.")
         os.system("shutdown /s /t 5")
@@ -736,23 +1291,52 @@ while True:
         conversation = [conversation[0]] + conversation[-(MAX_HISTORY):]
     
 
-    # 🔥 AI INTENT DETECTION
+    # AI INTENT DETECTION - Natural language samjhe
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
             {
                 "role": "system",
                 "content": """
-    You are an AI that extracts intent.
+You are an intent extraction engine for a voice assistant named FRIDAY who is female.
 
-    If the user gives a command like 'open youtube', return JSON:
-    {"action": "open", "target": "youtube"}
+Extract the user's intent and return ONLY valid JSON.
 
-    If it's not a command (like hello, hi, friday), return:
-    {"action": null, "target": null}
+ACTIONS:
+- "open" → user wants to open app/website
+- "close_tab" → close current tab (any variation)
+- "close_window" → close current window or specific app
+- "close_all_tabs" → close all browser tabs
+- "close_all_apps" → close all running apps
+- "search" → search something online
+- "none" → normal conversation
 
-    ONLY return JSON. No extra text.
-    """
+INTENT EXAMPLES - understand meaning, not exact words:
+IMPORTANT: Single words like "explain", "summarize", "read", "write", "search" alone without a clear target → {"action": "none", "target": null}
+Only detect "open" action when user clearly wants to open something specific.
+"instagram kholna" → {"action": "open", "target": "instagram"}
+"instagram kholo" → {"action": "open", "target": "instagram"}
+"instagram kholna hai" → {"action": "open", "target": "instagram"}
+"mujhe instagram chahiye" → {"action": "open", "target": "instagram"}
+"is tab ko band karo" → {"action": "close_tab", "target": null}
+"yeh tab band karo" → {"action": "close_tab", "target": null}
+"yah tab" → {"action": "close_tab", "target": null}
+"tab band karo" → {"action": "close_tab", "target": null}
+"band kar do" → {"action": "close_tab", "target": null}
+"make screen professional" → {"action": "make_professional", "target": null}
+"screen professional" → {"action": "make_professional", "target": null}
+"make screen profession" → {"action": "make_professional", "target": null}
+"professional screen" → {"action": "make_professional", "target": null}
+"instagram band karo" → {"action": "close_window", "target": "instagram"}
+"sare tab band karo" → {"action": "close_all_tabs", "target": null}
+"sab kuch band karo" → {"action": "close_all_apps", "target": null}
+"close all apps except calculator" → {"action": "close_all_apps", "target": "calculator"}
+"search weather" → {"action": "search", "target": "weather"}
+"weather search karo" → {"action": "search", "target": "weather"}
+"kya hal hai" → {"action": "none", "target": null}
+
+ONLY return JSON. Nothing else.
+"""
             },
             {
                 "role": "user",
@@ -761,37 +1345,292 @@ while True:
         ]
     )
 
-    reply = response.choices[0].message.content
-
-    import json
+    reply = response.choices[0].message.content.strip()
+    reply = reply.replace("```json", "").replace("```", "").strip()
+    start = reply.find("{")
+    end = reply.rfind("}") + 1
+    if start != -1 and end != 0:
+        reply = reply[start:end]
 
     try:
         data = json.loads(reply)
         action = data.get("action")
         target = data.get("target")
 
-        if action and target:
-            execute_command(action, target)
+        if action == "open" and target:
+            target = target.lower().strip()
+
+            # Browser apps
+            if target in BROWSER_APPS:
+                browser_path = BROWSER_APPS[target]
+                if os.path.exists(browser_path):
+                    os.startfile(browser_path)
+                else:
+                    os.system(f"start {target}")
+                speak(f"Opening {target}, sir.")
+                state.touch()
+                continue
+
+            # App first, then website
+            if target in APP_FIRST:
+                app_cmd = APP_FIRST[target]["app"]
+                web_url = APP_FIRST[target]["web"]
+                try:
+                    result = os.system(app_cmd)
+                    if result != 0:
+                        webbrowser.open(web_url)
+                        speak(f"App nahi mili, opening {target} in browser, sir.")
+                    else:
+                        speak(f"Opening {target}, sir.")
+                except:
+                    webbrowser.open(web_url)
+                    speak(f"Opening {target} in browser, sir.")
+                state.touch()
+                continue
+
+            # Web apps
+            if target in WEB_APPS:
+                webbrowser.open(WEB_APPS[target])
+                speak(f"Opening {target}, sir.")
+                state.touch()
+                continue
+
+            # System apps
+            if target in SYSTEM_APPS:
+                os.system(SYSTEM_APPS[target])
+                speak(f"Opening {target}, sir.")
+                state.touch()
+                continue
+
+            # File dhundho — but sirf agar target clearly file jaisa lage
+            # Short words jaise "chrome", "spotify" ke liye file search mat karo
+            common_apps = {"chrome", "firefox", "edge", "brave", "spotify", 
+                          "discord", "telegram", "whatsapp", "instagram",
+                          "notepad", "calculator", "paint", "zoom", "vlc"}
+            
+            if target not in common_apps:
+                file_path = find_file(target)
+                if file_path:
+                    os.startfile(file_path)
+                    speak(f"Opening {target}, sir.")
+                    state.touch()
+                    continue
+
+            app_path = find_app(target)
+            if app_path:
+                os.startfile(app_path)
+                speak(f"Opening {target}, sir.")
+                state.touch()
+                continue
+
+            # Last fallback
+            os.system(f"start {target}")
+            speak(f"Trying to open {target}, sir.")
+            state.touch()
             continue
-    #  CASE 2: null → normal AI reply chahiye
-        else:
-        #  yaha NORMAL AI call kar
+
+        elif action == "close_tab":
+            close_current_tab()
+            state.touch()
+            continue
+
+        elif action == "close_window":
+            if target:
+                import psutil
+                import subprocess
+                target_lower = target.lower()
+
+                # Normal process apps
+                PROCESS_APPS = {
+                    "spotify": ["spotify.exe"],
+                    "chrome": ["chrome.exe"],
+                    "firefox": ["firefox.exe"],
+                    "telegram": ["telegram.exe"],
+                    "discord": ["discord.exe"],
+                    "vlc": ["vlc.exe"],
+                    "zoom": ["zoom.exe"],
+                    "edge": ["msedge.exe"],
+                    "brave": ["brave.exe"],
+                    "notepad": ["notepad.exe"],
+                    "calculator": ["calc.exe", "calculatorapp.exe"],
+                }
+
+                # Windows Store apps — PowerShell se band karo by window title
+                STORE_APPS = {
+                    "instagram": "Instagram",
+                    "whatsapp": "WhatsApp",
+                    "linkedin": "LinkedIn",
+                    "snapchat": "Snapchat",
+                    "twitter": "Twitter",
+                }
+
+                killed = False
+
+                # Pehle normal process check karo
+                if target_lower in PROCESS_APPS:
+                    for proc in psutil.process_iter(['pid', 'name']):
+                        try:
+                            proc_name = proc.info['name'].lower()
+                            if any(
+                                p.lower() in proc_name
+                                for p in PROCESS_APPS[target_lower]
+                            ):
+                                proc.kill()
+                                killed = True
+                        except:
+                            continue
+
+                # Store apps — window title se band karo
+                elif target_lower in STORE_APPS:
+                    window_title = STORE_APPS[target_lower]
+                    try:
+                        result = subprocess.run(
+                            ['powershell', '-command',
+                             f'Get-Process | Where-Object {{$_.MainWindowTitle -like "*{window_title}*"}} | Stop-Process -Force'],
+                            capture_output=True, text=True, timeout=5
+                        )
+                        killed = True
+                    except Exception as e:
+                        print(f"Store app close error: {e}")
+
+                if killed:
+                    speak(f"{target}closed , boss.")
+                else:
+                    speak(f"{target} chal nahi rahi thi boss.")
+            else:
+                close_current_window()
+
+            state.touch()
+            continue
+
+        elif action == "close_all_tabs":
+            close_all_tabs()
+            state.touch()
+            continue
+        
+        elif action == "make_professional":
+            screen_text = read_screen()
+            if not screen_text:
+                speak("Screen pe kuch readable nahi mila boss.")
+                state.touch()
+                continue
+
+            prof_response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """
+Rewrite the given text in a professional tone.
+STRICT RULES:
+- Rewrite ONLY the actual content — ignore any file names, menu items, or UI text.
+- Do NOT mention title bars, menus, file names, or anything technical.
+- Do NOT add any intro like "Here is..." or "The following..."
+- Output ONLY the clean professionally rewritten text.
+"""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Rewrite professionally:\n\n{screen_text}"
+                    }
+                ]
+            )
+
+            reply = prof_response.choices[0].message.content
+            print("FRIDAY:", reply)
+            speak("Done boss, pasting the professional version.")
+
+            import pygetwindow as gw
+            notepad_windows = [
+                w for w in gw.getAllWindows()
+                if 'notepad' in w.title.lower() or '.txt' in w.title.lower()
+            ]
+
+            if notepad_windows:
+                notepad_windows[0].activate()
+                time.sleep(0.8)
+                pyautogui.hotkey('ctrl', 'a')
+                time.sleep(0.3)
+                pyperclip.copy(reply)
+                pyautogui.hotkey('ctrl', 'v')
+                speak("Notepad updated, boss.")
+            else:
+                pyperclip.copy(reply)
+                speak("Copied to clipboard boss, Ctrl V se paste kar lo.")
+
+            state.touch()
+            continue
+
+        elif action == "close_all_apps":
+            if target:
+                # Multiple apps "spotify and discord" handle karo
+                keep_apps = [
+                    app.strip()
+                    for app in target.replace(" and ", ",").replace(" or ", ",").split(",")
+                    if app.strip()
+                ]
+                close_specific_apps(keep_apps)
+            else:
+                close_all_apps()
+            state.touch()
+            continue
+
+        elif action == "search" and target:
+            url = f"https://www.google.com/search?q={target}"
+            webbrowser.open(url)
+            speak(f"Searching for {target}, sir.")
+            state.touch()
+            continue
+
+        elif action == "none" or not action:
+            # Normal AI conversation
             normal_response = client.chat.completions.create(
                 model="llama-3.1-8b-instant",
                 messages=[
                     {
                         "role": "system",
                         "content": f"""
-            You are FRIDAY, a smart AI assistant.
+You are FRIDAY, a smart female AI assistant — calm, confident, and precise.
 
-            User info: {memory}
+User's saved memory:
+{json.dumps(memory, indent=2)}
 
-            Rules:
-            - Only respond if the user gives a clear instruction or question.
-            - If input is unclear (like 'friday', 'hello', single word), DO NOT respond.
-            - Do NOT give default replies like date/time unless asked.
-            - Be short, helpful, and to the point.
-            """
+TONE RULES — very important:
+TONE RULES — very important:
+- You are FRIDAY, a smart female AI assistant.
+- Never say "main aapki madad kar sakta hoon" — you are female, say "kar sakti hoon" if needed.
+- Keep responses short — 1 to 2 sentences max.
+- Address user as "boss".
+- If you don't understand, say: "Samajh nahi aaya boss, thoda clear karo."
+- NEVER give long multi-sentence Hindi explanations for simple unclear inputs.
+- If input is just one unclear word, say exactly: "Kya matlab hai boss, thoda clear karo."
+- Maximum 1-2 sentences in any response.
+- Do not make up information from memory unprompted.
+- Only use memory when user specifically asks about themselves.
+
+LANGUAGE RULES — most important:
+- Do NOT just copy the user's language blindly.
+- Think about what sounds most NATURAL for that specific reply.
+- Simple factual answers like time, date, weather → short English is fine even if asked in Hindi.
+  Example: "time kya hua hai" → "It's 3:39 PM, boss." ✅
+  Not: "Abhi 3 baj ke 39 minute hue hain PM boss." ❌
+- Emotional or casual chat → match user's vibe.
+  Example: "kya hal hai" → "Sab theek boss, aap batao?" ✅
+- If user speaks pure Hindi → reply in simple clean Hindi.
+- If user speaks pure English → reply in English.
+- If user speaks Hinglish → reply naturally in Hinglish.
+- NEVER mix grammar awkwardly. Natural > Consistent.
+
+MEMORY RULES:
+- Use saved memory to answer personal questions directly.
+- If answer is in memory, answer confidently.
+- If not in memory, say "Woh info abhi mere paas nahi hai boss."
+
+EXAMPLES of good responses:
+User: kya hal hai → FRIDAY: Sab theek hai boss, aap batao?
+User: mera naam kya hai → FRIDAY: Aapka naam Harsh hai boss.
+User: what time is it → FRIDAY: Let me check that for you, boss.
+"""
                     },
                     {
                         "role": "user",
@@ -801,10 +1640,8 @@ while True:
             )
 
             final_reply = normal_response.choices[0].message.content
-
             print("FRIDAY:", final_reply)
 
-            #  useless replies block
             bad_phrases = [
                 "no instruction",
                 "you haven't provided",
@@ -821,9 +1658,10 @@ while True:
             if "write" in user_input.lower() or "type" in user_input.lower():
                 time.sleep(1)
                 paste_text(final_reply)
-            conversation.append({"role": "assistant", "content": final_reply})
 
+            conversation.append({"role": "assistant", "content": final_reply})
             continue
 
-    except:
-        pass
+    except Exception as e:
+        print("Intent error:", e)
+
