@@ -7,10 +7,6 @@ from friday.voice import speak
 
 
 def handle_system_command(user_input: str) -> bool:
-    """
-    System commands handle karo.
-    Returns True agar handle hua.
-    """
     u = user_input.lower()
 
     if "shutdown" in u:
@@ -21,6 +17,23 @@ def handle_system_command(user_input: str) -> bool:
     if "restart system" in u:
         speak("Restarting the system, boss.")
         os.system("shutdown /r /t 5")
+        return True
+
+    if any(t in u for t in [
+        "lock screen", "lock karo", "lock kar do",
+        "screen lock", "lock pc", "lock computer",
+        "lock", "pc lock karo"
+    ]):
+        speak("Locking the screen, boss.")
+        os.system("rundll32.exe user32.dll,LockWorkStation")
+        return True
+
+    if any(t in u for t in [
+        "log out", "logout", "log off",
+        "sign out", "log out karo"
+    ]):
+        speak("Logging out, boss.")
+        os.system("shutdown /l")
         return True
 
     return False

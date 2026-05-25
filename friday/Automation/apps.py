@@ -199,49 +199,47 @@ def close_specific_window(target: str):
             print(f"Store app close error: {e}")
 
     if killed:
-        speak(f"{target} close ho gayi, boss.")
+        speak(f"{target} closed boss.")
     else:
-        speak(f"{target} chal nahi rahi thi boss.")
+        speak(f"{target} not running.")
 
 
 def open_app(target: str):
     """App ya website kholna"""
 
     # 1. Browser
+    # 1. Browser
     if target in BROWSER_APPS and BROWSER_APPS[target]:
+        speak(f"Opening {target}, boss.")
         if os.path.exists(BROWSER_APPS[target]):
             os.startfile(BROWSER_APPS[target])
         else:
             os.system(f"start {target}")
-        speak(f"Opening {target}, boss.")
         return
 
     # 2. Store apps / APP_FIRST
     if target in APP_FIRST:
+        speak(f"Opening {target}, boss.")
         app_cmd = APP_FIRST[target]["app"]
         web_url = APP_FIRST[target]["web"]
         try:
             result = os.system(app_cmd)
             if result != 0:
                 webbrowser.open(web_url)
-                speak(f"App nahi mili, opening {target} in browser, boss.")
-            else:
-                speak(f"Opening {target}, boss.")
         except:
             webbrowser.open(web_url)
-            speak(f"Opening {target} in browser, boss.")
         return
 
     # 3. Web apps
     if target in WEB_APPS:
-        webbrowser.open(WEB_APPS[target])
         speak(f"Opening {target}, boss.")
+        webbrowser.open(WEB_APPS[target])
         return
 
     # 4. System apps
     if target in SYSTEM_APPS:
-        os.system(SYSTEM_APPS[target])
         speak(f"Opening {target}, boss.")
+        os.system(SYSTEM_APPS[target])
         return
 
     # 5. File search — common apps ke liye skip

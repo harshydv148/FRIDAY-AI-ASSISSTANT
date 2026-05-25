@@ -34,6 +34,17 @@ def refresh_memory():
 def get_memory() -> dict:
     return memory
 
+def delete_memory_key(key: str) -> bool:
+    """Memory se ek key delete karo."""
+    global memory
+    memory = load_memory()
+    if key in memory:
+        del memory[key]
+        save_memory(memory)
+        refresh_memory()
+        print(f"🗑️ Deleted memory: {key}")
+        return True
+    return False
 
 explicit_keywords = [
     "remember", "yaad rakh", "save this", "note this",
@@ -164,3 +175,60 @@ def extract_and_save(user_input: str) -> bool:
         print(f"MEMORY ERROR: {e}")
 
     return False
+
+
+CONVERSATION_MEMORY_KEY = "__conversation_history__"
+MAX_CONVERSATIONS_STORED = 20
+
+
+def save_conversation_summary(user_input: str, friday_reply: str):
+    """
+    Har conversation turn ka summary memory mein save karo.
+    """
+    from datetime import datetime
+    global memory
+
+    memory = load_memory()
+    history = memory.get(CONVERSATION_MEMORY_KEY, [])
+
+    entry = {
+        "time": datetime.now().strftime("%d %b %Y %H:%M"),
+        "user": user_input,
+        "friday": friday_reply,
+    }
+
+    history.append(entry)
+
+    # Sirf last 20 conversations rakho
+    memory[CONVERSATION_MEMORY_KEY] = history[-MAX_CONVERSATIONS_STORED:]
+    save_memory(memory)
+
+
+def get_conversation_history() -> str:
+    """
+    Previous conversations ka readable summary return karo.
+    """
+    memory = load_memory()
+    history = memory.get(CONVERSATION_MEMORY_KEY, [])
+
+    if not history:
+        return "No previous conversations."
+
+    lines = []
+    for entry in history[-10:]:  # last 10 conversations
+        lines.append(
+            f"[{entry['time']}] User: {entry['user']} → FRIDAY: {entry['friday']}"
+        )
+
+    return "\n".join(lines)
+
+
+def clear_conversation_history():
+    """
+    Conversation history clear karo.
+    """
+    global memory
+    memory = load_memory()
+    memory[CONVERSATION_MEMORY_KEY] = []
+    save_memory(memory)
+    print("🗑️ Conversation history cleared.")

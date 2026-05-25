@@ -99,6 +99,9 @@ def detect_and_handle_intent(user_input: str, memory: dict) -> bool:
 
         # SEARCH
         elif action == "search" and target:
+            if target.strip().lower() == "search":
+                speak("What do you want to search for, boss?")
+                return True
             url = f"https://www.google.com/search?q={target}"
             webbrowser.open(url)
             speak(f"Searching for {target}, boss.")
@@ -109,10 +112,26 @@ def detect_and_handle_intent(user_input: str, memory: dict) -> bool:
             handle_professional_screen()
             return True
 
+        elif action == "log_feature" and target:
+            from friday.Personality.self_knowledge import log_new_feature
+            log_new_feature(target)
+            speak(f"Got it boss, I'll remember that you added {target}.")
+            return True
+        
+        elif action == "solve_screen":
+            from friday.Commands.screen import handle_screen_command
+            handle_screen_command("solve screen")
+            return True
+
+        elif action == "guide_screen":
+            from friday.Commands.screen import handle_screen_command
+            handle_screen_command("help me solve")
+            return True
+        
         # NONE — normal conversation chahiye
         elif action == "none" or not action:
             return False
-
+        
     except Exception as e:
         print(f"Intent error: {e}")
 

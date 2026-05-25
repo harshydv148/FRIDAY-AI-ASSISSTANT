@@ -120,7 +120,6 @@ def handle_explain_screen():
     reply = response.choices[0].message.content
     sentences = [s.strip() for s in reply.replace("\n", " ").split(".") if s.strip()]
     short_reply = ". ".join(sentences[:2]) + "." if sentences else reply
-    print("FRIDAY:", short_reply)
     if should_speak(short_reply):
         speak(short_reply)
 
@@ -141,7 +140,6 @@ def handle_summarize_screen():
     reply = response.choices[0].message.content
     sentences = [s.strip() for s in reply.replace("\n", " ").split(".") if s.strip()]
     short_reply = ". ".join(sentences[:2]) + "." if sentences else reply
-    print("FRIDAY:", short_reply)
     speak(short_reply)
 
 
@@ -206,14 +204,208 @@ SUMMARIZE_TRIGGERS = [
 ]
 
 SOLO_WORDS = {
-    "explain": "explain screen bolo boss.",
-    "summarize": "summarise screen bolo boss.",
-    "summarise": "summarise screen bolo boss.",
-    "professional": "make screen professional bolo boss.",
-    "read": "read screen bolo boss.",
-    "bright": "Kya karna hai boss? Thoda clear karo.",
-    "screen": "Kya karna hai screen ke saath boss? Explain, summarise, ya professional?",
+    "explain": "Explain what, boss? Say 'explain screen' if you want me to read the screen.",
+    "summarize": "Summarize what? Say 'summarize screen' to summarize what's on screen.",
+    "summarise": "Summarize what? Say 'summarise screen' to summarize what's on screen.",
+    "professional": "Make what professional? Say 'make screen professional' for screen rewrite.",
+    "read": "Read what, boss? Say 'read screen' to read what's on screen.",
+    "bright": "What do you need, boss?",
+    "screen": "What do you want with the screen? Explain, summarise, or make it professional?",
+    "solve": "Solve what, boss? Say 'solve screen' for the problem on screen.",
+    "answer": "Answer what? Say 'solve screen' for the problem on screen.",
 }
+
+SOLVE_TRIGGERS = [
+    "solve this", "solve screen", "solve question",
+    "answer this", "answer the question",
+    "question solve karo", "is question ka answer",
+    "solve kar", "solve karo", "solve it",
+    "is problem ka solution", "leetcode solve",
+]
+
+GUIDE_TRIGGERS = [
+    "help me solve", "guide karo", "guide me",
+    "help karo", "samjhao", "explain karo question",
+    "hint do", "hints do", "kaise solve karu",
+    "help solve", "meri help karo",
+    "intuition build karo", "sikhao",
+    "step by step", "walk me through",
+    "approach batao", "approach kya hogi",
+]
+
+# Guide session state
+_guide_session = {
+    "active": False,
+    "problem": "",
+    "conversation": [],
+    "step": 0,
+}
+
+
+def _start_guide_session(screen_text: str):
+    """Socratic guide mode start karo."""
+    global _guide_session
+
+    _guide_session["active"] = True
+    _guide_session["problem"] = screen_text
+    _guide_session["step"] = 0
+    _guide_session["conversation"] = []
+
+    # Pehle problem analyze karo
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {
+                "role": "system",
+                "content": """
+You are a Socratic programming mentor — like a great teacher, not an answer machine.
+
+Your job: Guide the student to solve the problem THEMSELVES.
+
+FIRST RESPONSE — Do ALL of these:
+1. Briefly explain what the problem is asking (1-2 lines)
+2. Tell which DSA pattern/concept this belongs to (e.g., "This is a Backtracking problem")
+3. Ask WHY this pattern fits — make them think
+4. Ask one specific question to check their understanding
+
+RULES:
+- NEVER give the solution or code directly
+- Ask one question at a time
+- Build intuition step by step
+- If they're stuck, give a small hint — not the answer
+- Celebrate small wins — "Good thinking boss!"
+- Keep responses conversational and short
+- Speak like a cool senior developer, not a textbook
+"""
+            },
+            {
+                "role": "user",
+                "content": f"Student needs help with this problem:\n\n{screen_text}\n\nStart the guidance session."
+            }
+        ],
+    )
+
+    reply = response.choices[0].message.content
+    _guide_session["conversation"].append({
+        "role": "assistant",
+        "content": reply
+    })
+
+    print("\n🎓 GUIDE MODE:\n", reply)
+    speak(_get_speakable(reply))
+
+
+def _get_speakable(text: str) -> str:
+    """Long text ko speakable banao."""
+    # Code blocks remove karo
+    import re
+    text = re.sub(r'```[\s\S]*?```', 'Check the terminal for code, boss.', text)
+    # First 2 sentences lo
+    sentences = [s.strip() for s in text.replace('\n', ' ').split('.') if s.strip()]
+    return '. '.join(sentences[:3]) + '.' if sentences else text
+
+
+def continue_guide_session(user_input: str) -> bool:
+    """
+    Guide session continue karo — user ka response process karo.
+    Returns True agar guide session active hai.
+    """
+    global _guide_session
+
+    if not _guide_session["active"]:
+        return False
+
+     # Exit command — guide se pehle main loop handle kare
+    if user_input.lower().strip() == "exit":
+        _guide_session["active"] = False
+        return False
+
+    # Session end commands
+    if any(t in user_input.lower() for t in [
+        "guide band karo", "stop guide", "guide stop",
+        "direct answer do", "bas karo", "exit guide",
+        "solve kar abhi", "direct solution",
+    ]):
+        # Direct solve karo
+        if "solve" in user_input.lower() or "direct" in user_input.lower():
+            speak("Okay boss, giving you the direct solution.")
+            _guide_session["active"] = False
+
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Give complete working solution. Code only with brief comments."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Solve this:\n\n{_guide_session['problem']}"
+                    }
+                ],
+            )
+            solution = response.choices[0].message.content
+            print("FRIDAY Solution:\n", solution)
+
+            import pyperclip
+            import pyautogui
+            import time
+            pyperclip.copy(solution)
+            time.sleep(0.5)
+            pyautogui.hotkey('ctrl', 'v')
+        else:
+            speak("Guide session ended, boss.")
+            _guide_session["active"] = False
+        return True
+
+    # User ka response process karo
+    _guide_session["conversation"].append({
+        "role": "user",
+        "content": user_input
+    })
+
+    # Context build karo
+    messages = [
+        {
+            "role": "system",
+            "content": f"""
+You are a Socratic programming mentor.
+
+Problem being solved:
+{_guide_session['problem']}
+
+RULES:
+- NEVER give direct solution or complete code
+- Ask one question at a time
+- If answer is correct → validate + next hint
+- If answer is wrong → gentle correction + nudge
+- If stuck → give smallest possible hint
+- Build towards solution step by step
+- Keep responses SHORT — 3-4 lines max
+- End every response with a question
+- Celebrate progress — "Nice thinking!", "Exactly boss!"
+"""
+        }
+    ] + _guide_session["conversation"]
+
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=messages,
+    )
+
+    reply = response.choices[0].message.content
+    _guide_session["conversation"].append({
+        "role": "assistant",
+        "content": reply
+    })
+
+    # History limit
+    if len(_guide_session["conversation"]) > 20:
+        _guide_session["conversation"] = _guide_session["conversation"][-20:]
+
+    print("\n🎓 FRIDAY:\n", reply)
+    speak(_get_speakable(reply))
+    return True
 
 
 def handle_screen_command(user_input: str) -> bool:
@@ -223,9 +415,9 @@ def handle_screen_command(user_input: str) -> bool:
     """
     u = user_input.lower().strip()
 
-    # Solo word check
-    if u in SOLO_WORDS:
-        speak(SOLO_WORDS[u])
+    # Solo word check — sirf exact single word match
+    if u.strip() in SOLO_WORDS and len(u.strip().split()) == 1:
+        speak(SOLO_WORDS[u.strip()])
         return True
 
     # Summarize
@@ -250,4 +442,139 @@ def handle_screen_command(user_input: str) -> bool:
         speak("I've read the screen, sir.")
         return True
 
+    # SOLVE/ANSWER question from screen
+    if any(t in u for t in SOLVE_TRIGGERS):
+        screen_text = read_screen()
+        if not screen_text.strip():
+            speak("Screen pe kuch readable nahi mila boss.")
+            return True
+
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """
+You are an expert programming and problem-solving assistant.
+
+The user has a problem/question on their screen.
+
+RULES:
+- Read the problem carefully from the screen text.
+- Provide a complete, working solution.
+- If it's a coding problem, write clean working code.
+- If it's a math problem, solve it step by step.
+- If it's a general question, answer it directly.
+- Do NOT ask for permission or clarification.
+- Just solve it directly.
+- Keep explanation brief — focus on the solution.
+"""
+                },
+                {
+                    "role": "user",
+                    "content": f"Solve this problem from my screen:\n\n{screen_text}"
+                }
+            ],
+        )
+
+        solution = response.choices[0].message.content
+        print("FRIDAY Solution:\n", solution)
+        speak("Got the solution boss, pasting it for you.")
+
+        # Solution paste karo jahan cursor hai
+        import pyperclip
+        import pyautogui
+        import time
+        pyperclip.copy(solution)
+        time.sleep(0.5)
+        pyautogui.hotkey('ctrl', 'v')
+
+        return True
+
+    # MODE 1 — Direct Solve
+    if any(t in u for t in SOLVE_TRIGGERS):
+        screen_text = read_screen()
+        if not screen_text.strip():
+            speak("Screen pe kuch readable nahi mila boss.")
+            return True
+
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """
+You are an expert programming assistant.
+User wants a DIRECT solution to the problem on screen.
+
+RULES:
+- Provide complete working solution immediately.
+- Write clean, well-commented code.
+- Brief explanation after code — not before.
+- No asking for clarification — just solve.
+"""
+                },
+                {
+                    "role": "user",
+                    "content": f"Solve this completely:\n\n{screen_text}"
+                }
+            ],
+        )
+
+        solution = response.choices[0].message.content
+        print("FRIDAY Solution:\n", solution)
+        speak("Got the solution boss, pasting it now.")
+
+        import pyperclip
+        import pyautogui
+        import time
+        pyperclip.copy(solution)
+        time.sleep(0.5)
+        pyautogui.hotkey('ctrl', 'v')
+        return True
+
+    # MODE 2 — Guide Mode (Socratic)
+    if any(t in u for t in GUIDE_TRIGGERS):
+        screen_text = read_screen()
+        if not screen_text.strip():
+            speak("Screen pe kuch readable nahi mila boss.")
+            return True
+
+        # Guide session start karo
+        _start_guide_session(screen_text)
+        return True
+
     return False
+
+
+def _get_speakable(text: str) -> str:
+    """Text ko speakable banao — code blocks hata, reasonable length rakho."""
+    import re
+
+    # Code blocks remove karo
+    text = re.sub(r'```[\s\S]*?```', '', text)
+    
+    # Markdown remove karo
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    text = re.sub(r'#{1,6}\s', '', text)
+    
+    # Clean up
+    text = text.strip()
+
+    # Agar 400 chars se chhota hai toh poora bolo
+    if len(text) <= 400:
+        return text
+
+    # Warna pehle 400 chars tak complete sentence dhundho
+    truncated = text[:400]
+    last_period = max(
+        truncated.rfind('.'),
+        truncated.rfind('?'),
+        truncated.rfind('!')
+    )
+
+    if last_period > 200:
+        return truncated[:last_period + 1]
+
+    return truncated + "..."

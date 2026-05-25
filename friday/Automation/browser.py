@@ -61,7 +61,7 @@ def handle_close_tabs(user_input: str) -> bool:
     """
     u = user_input.lower()
 
-    if "close all tab" in u:
+    if "close all tab" in u or "close all chrome" in u:
         has_except = any(
             w in u for w in ["except", "accept", "but not", "keep"]
         )

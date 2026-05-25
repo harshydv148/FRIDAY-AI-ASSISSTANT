@@ -6,7 +6,8 @@ class FridayState:
         self.last_active = time.time()
         self.first_start = True
         self.standby = False
-        self.TIMEOUT = 45
+        self.TIMEOUT = 100
+        self.auto_standby = True  # default ON hai
 
     def wake(self):
         self.active = True
