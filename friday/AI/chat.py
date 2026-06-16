@@ -38,6 +38,15 @@ BAD_PHRASES = [
     "please provide",
 ]
 
+# Current session context
+_session_context = ""
+
+def set_session_context(context: str):
+    global _session_context
+    _session_context = context
+
+def get_session_context() -> str:
+    return _session_context
 
 def chat(user_input: str, memory: dict) -> str:
     global conversation
@@ -46,6 +55,8 @@ def chat(user_input: str, memory: dict) -> str:
     if len(conversation) > MAX_HISTORY + 1:
         conversation = [conversation[0]] + conversation[-(MAX_HISTORY):]
 
+    session_ctx = get_session_context()
+    
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
@@ -57,6 +68,12 @@ def chat(user_input: str, memory: dict) -> str:
                 "role": "system",
                 "content": "ABSOLUTE RULE: Respond in English only. Never use Hindi, Urdu, or Hinglish. Not even one word.",
             },
+            *(
+                [{
+                    "role": "system",
+                    "content": f"Current session context: {session_ctx}"
+                }] if session_ctx else []
+            ),
             *conversation[1:],
         ],
     )

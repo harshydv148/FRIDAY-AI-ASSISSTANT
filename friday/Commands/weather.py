@@ -48,6 +48,9 @@ def get_weather(city: str = None) -> dict:
             "wind": round(data["wind"]["speed"] * 3.6),
             "min_temp": round(data["main"]["temp_min"]),
             "max_temp": round(data["main"]["temp_max"]),
+            "rain": "rain" in data["weather"][0]["description"].lower() or
+                    "drizzle" in data["weather"][0]["description"].lower() or
+                    data.get("rain") is not None,
         }
 
     except requests.Timeout:
@@ -77,6 +80,23 @@ def handle_weather_command(user_input: str) -> bool:
     Returns True agar handle hua.
     """
     u = user_input.lower()
+
+    # Rain specific query
+    rain_triggers = [
+        "will it rain", "barish hogi", "baarish hogi",
+        "rain hoga", "will it rain today",
+        "kya baarish hogi", "barish ka kya hal",
+    ]
+    if any(t in u for t in rain_triggers):
+        data = get_weather()
+        if "error" in data:
+            speak(f"Couldn't check weather, boss.")
+            return True
+        if data.get("rain"):
+            speak(f"Yes boss, {data['description']} expected in {data['city']}. Carry an umbrella.")
+        else:
+            speak(f"No rain expected boss. It's {data['description']} in {data['city']}.")
+        return True
 
     weather_triggers = [
         "weather", "mausam", "temperature",

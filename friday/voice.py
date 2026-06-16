@@ -104,19 +104,33 @@ def _gtts_speak(text: str):
         print(f"gTTS error: {e}")
 
 
-def listen() -> str | None:
+def listen(silent: bool = False) -> str | None:
     """Microphone se voice input lo."""
     r = sr.Recognizer()
+    r.energy_threshold = 300
+    r.dynamic_energy_threshold = True
+
     with sr.Microphone() as source:
-        print("🎤 Listening...")
-        audio = r.listen(source)
+        r.adjust_for_ambient_noise(source, duration=0.3)
+        if not silent:
+            print("🎤 Listening...")
+        try:
+            audio = r.listen(source, timeout=5, phrase_time_limit=10)
+        except sr.WaitTimeoutError:
+            return None
+
     try:
         text = r.recognize_google(audio)
         return text
-    except:
-        print("Sorry, couldn't understand.")
+    except sr.UnknownValueError:
+        if not silent:
+            print("Sorry, couldn't understand.")
         return None
-
+    except sr.RequestError:
+        print("⚠️ Speech recognition unavailable.")
+        return None
+    except Exception:
+        return None
 
 def should_speak(text: str) -> bool:
     """Check karo text speakable hai ya nahi."""

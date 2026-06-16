@@ -128,6 +128,18 @@ def detect_and_handle_intent(user_input: str, memory: dict) -> bool:
             handle_screen_command("help me solve")
             return True
         
+        elif action == "get_time":
+            from datetime import datetime
+            now = datetime.now()
+            speak(f"It's {now.strftime('%I:%M %p')}, boss.")
+            return True
+
+        elif action == "get_date":
+            from datetime import datetime
+            now = datetime.now()
+            speak(f"Today is {now.strftime('%A, %d %B %Y')}, boss.")
+            return True
+        
         # NONE — normal conversation chahiye
         elif action == "none" or not action:
             return False

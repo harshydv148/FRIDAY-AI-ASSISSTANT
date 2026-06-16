@@ -22,12 +22,59 @@ from friday.Commands.weather import handle_weather_command
 from friday.Commands.todo import handle_todo_command
 from friday.Commands.spotify import handle_spotify_command
 from friday.Automation.volume import handle_volume_command
+from friday.Commands.git_commands import handle_git_command
+from friday.Commands.network import handle_network_command
+from friday.Commands.camera import handle_camera_command
+from friday.Commands.face_auth import handle_face_command, verify_face
+from friday.AI.chat import handle_chat, set_session_context
 
 load_dotenv()
 
 state = FridayState()
 
 print("FRIDAY online\n")
+# Startup pe face verify karo
+from friday.Commands.face_auth import (
+    verify_face, log_intruder, get_intruder_report, clear_intruder_log
+)
+
+_face_result = verify_face()
+
+if _face_result == "boss":
+    print("✅ Boss identified.")
+    # Check karo koi intruder tha kya
+    intruder_logs = get_intruder_report()
+    if intruder_logs:
+        count = len(intruder_logs)
+        last_time = intruder_logs[-1]["time"]
+        speak(
+            f"Welcome back boss. "
+            f"Heads up — someone accessed your laptop {count} time{'s' if count > 1 else ''} while you were away. "
+            f"Last access was at {last_time}."
+        )
+        print(f"⚠️ Intruder report: {count} access(es)")
+        for log in intruder_logs:
+            print(f"  - {log['time']}")
+        # Log clear karo
+        clear_intruder_log()
+    else:
+        speak("Hey boss, all clear.")
+
+elif _face_result == "unknown":
+    speak(
+        "Hey, you're not my boss. "
+        "I don't take orders from you. "
+        "Harsh will know about this."
+    )
+    log_intruder()
+    print("⚠️ Unknown user — logged.")
+
+elif _face_result == "not_registered":
+    print("ℹ️ No face registered. Say 'register my face'.")
+
+elif _face_result == "no_face":
+    print("ℹ️ No face detected at startup.")
+
 
 # Pending reminders restore karo
 restore_reminders()
@@ -43,10 +90,15 @@ while True:
         print("FRIDAY: (standby mode)")
         speak("Going on standby.")
 
-    user_input = listen()
+    # Standby mein silent listen
+    if state.standby:
+        user_input = listen(silent=True)
+    else:
+        user_input = listen()
 
     if not user_input:
         continue
+
 
     print("You:", user_input)
 
@@ -70,15 +122,54 @@ while True:
         user_input = user_input.lower().replace("friday", "").strip()
 
         if not user_input:
-            import random
-            greetings = [
-                "Yeah boss?",
-                "Hey! What's up?",
-                "I'm here, what do you need?",
-                "Listening, boss.",
-                "What's good?",
-            ]
-            speak(random.choice(greetings))
+            # Face verify karo
+            _current_face = verify_face()
+
+            if _current_face == "boss":
+
+                # Intruder log check karo
+                intruder_logs = get_intruder_report()
+                if intruder_logs:
+                    count = len(intruder_logs)
+                    last_time = intruder_logs[-1]["time"]
+                    times = ", ".join([l["time"] for l in intruder_logs])
+                    
+                    # Context set karo taaki AI jaane
+                    set_session_context(
+                        f"Someone unknown tried to access Friday {count} time(s) "
+                        f"while boss was away. Access times: {times}. "
+                        f"Friday doesn't know who it was — just that face recognition "
+                        f"marked them as unknown. Boss just got back and was informed."
+                    )
+                    
+                    speak(
+                        f"Hey boss! Heads up — someone tried to access me "
+                        f"{count} time{'s' if count > 1 else ''} while you were away. "
+                        f"Last attempt was at {last_time}."
+                    )
+                    clear_intruder_log()
+                else:
+                    import random
+                    greetings = [
+                        "Yeah boss?",
+                        "Hey! What's up?",
+                        "I'm here, what do you need?",
+                        "Listening, boss.",
+                        "What's good?",
+                    ]
+                    speak(random.choice(greetings))
+            elif _current_face == "unknown":
+                speak("You're not my boss. I don't take orders from you.")
+                log_intruder()
+            else:
+                import random
+                greetings = [
+                    "Yeah boss?",
+                    "Hey! What's up?",
+                    "Listening, boss.",
+                ]
+                speak(random.choice(greetings))
+
             state.touch()
             continue
 
@@ -88,7 +179,7 @@ while True:
 
     # EXIT
     if user_input.lower().strip() == "exit":
-        speak("Later, boss.")
+        speak("See you Later, boss.")
         break
 
     # GUIDE SESSION — active hai toh pehle handle karo
@@ -122,6 +213,16 @@ while True:
 
     # SCREENSHOT
     if handle_screenshot_command(user_input):
+        state.touch()
+        continue
+    
+    #Camera Feed 
+    if handle_camera_command(user_input):
+        state.touch()
+        continue
+
+    #face Authentication
+    if handle_face_command(user_input):
         state.touch()
         continue
 
@@ -166,6 +267,16 @@ while True:
     
     # SPOTIFY/MUSIC
     if handle_spotify_command(user_input):
+        state.touch()
+        continue
+    
+    #Git Commands
+    if handle_git_command(user_input):
+        state.touch()
+        continue
+    
+    #network speed
+    if handle_network_command(user_input):
         state.touch()
         continue
 

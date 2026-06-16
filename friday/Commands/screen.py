@@ -292,7 +292,19 @@ RULES:
     })
 
     print("\n🎓 GUIDE MODE:\n", reply)
-    speak(_get_speakable(reply))
+    # Poora reply bolo — code blocks hata ke
+    import re
+    speakable = re.sub(r'```[\s\S]*?```', 'Check terminal for code, boss.', reply)
+    speakable = re.sub(r'\*\*(.+?)\*\*', r'\1', speakable)
+    speakable = re.sub(r'\*(.+?)\*', r'\1', speakable)
+    speakable = speakable.strip()
+    # 600 chars tak bolo
+    if len(speakable) > 600:
+        # Last complete sentence tak
+        truncated = speakable[:600]
+        last = max(truncated.rfind('.'), truncated.rfind('?'))
+        speakable = truncated[:last+1] if last > 200 else truncated
+    speak(speakable)
 
 
 def _get_speakable(text: str) -> str:
@@ -404,7 +416,16 @@ RULES:
         _guide_session["conversation"] = _guide_session["conversation"][-20:]
 
     print("\n🎓 FRIDAY:\n", reply)
-    speak(_get_speakable(reply))
+    import re
+    speakable = re.sub(r'```[\s\S]*?```', 'Check terminal for code, boss.', reply)
+    speakable = re.sub(r'\*\*(.+?)\*\*', r'\1', speakable)
+    speakable = re.sub(r'\*(.+?)\*', r'\1', speakable)
+    speakable = speakable.strip()
+    if len(speakable) > 600:
+        truncated = speakable[:600]
+        last = max(truncated.rfind('.'), truncated.rfind('?'))
+        speakable = truncated[:last+1] if last > 200 else truncated
+    speak(speakable)
     return True
 
 

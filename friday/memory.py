@@ -92,6 +92,17 @@ NEVER SAVE:
 - Commands ("open", "search", "play")
 - Random numbers with no context ("14", "2006")
 - General knowledge ("what is python")
+- Incomplete sentences ("I am the one", "I am here", "I am back")
+- Sentences without clear personal fact ("I am the one who built")
+- Boastful or unclear statements
+
+IMPORTANT — Only save if there is a CLEAR specific fact:
+- "I am a BCA student" ✅ — clear education fact
+- "I am the one who built" ❌ — incomplete, no clear fact
+- "I am 19 years old" ✅ — clear age
+- "I am here" ❌ — not a personal fact
+- "I am back" ❌ — not a personal fact
+- "I am the best" ❌ — not a personal fact
 
 KEY NAMING - always specific:
 - like/love food → "favourite_food"

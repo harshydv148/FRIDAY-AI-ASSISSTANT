@@ -58,6 +58,16 @@ Only detect "open" action when user clearly wants to open something specific.
 "delete favourite" → {"action": "none", "target": null}
 "remove it" → {"action": "none", "target": null}
 "forget it" → {"action": "none", "target": null}
+"what time is it" → {"action": "get_time", "target": null}
+"kitne baje hain" → {"action": "get_time", "target": null}
+"time batao" → {"action": "get_time", "target": null}
+"aaj ki date" → {"action": "get_date", "target": null}
+"it's been a long time" → {"action": "none", "target": null}
+"long time no see" → {"action": "none", "target": null}
+"what if I kill him" → {"action": "none", "target": null}
+"kill him" → {"action": "none", "target": null}
+"I will kill" → {"action": "none", "target": null}
+"what if I" → {"action": "none", "target": null}
 
 ONLY return JSON. Nothing else.
 """

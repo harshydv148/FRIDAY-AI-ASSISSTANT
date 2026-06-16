@@ -35,33 +35,6 @@ def handle_greeting(user_input: str) -> bool:
     return False
 
 
-def handle_time(user_input: str) -> bool:
-    time_triggers = [
-        "time", "what time", "current time", "kitne baje",
-        "time kya", "kya time", "time kya hai", "time kya hua",
-        "time batao", "time bolo", "abhi kitne baje hain",
-        "what's the time", "baje hain",
-    ]
-    if any(t in user_input.lower() for t in time_triggers):
-        now = datetime.now()
-        hour = now.strftime("%I")
-        minute = now.strftime("%M")
-        ampm = now.strftime("%p")
-        speak(f"It's {hour}:{minute} {ampm}, boss.")
-        return True
-    return False
-
-
-def handle_date(user_input: str) -> bool:
-    if "day" in user_input.lower() or "date" in user_input.lower():
-        now = datetime.now()
-        day = now.strftime("%A")
-        date = now.strftime("%d %B %Y")
-        speak(f"Today is {day}, {date}, boss.")
-        return True
-    return False
-
-
 STUDY_LINKS = os.getenv(
     "STUDY_LINKS",
     "https://leetcode.com,https://chat.openai.com,https://github.com"
@@ -123,10 +96,7 @@ def handle_shortcut(user_input: str, state=None) -> bool:
         return True
     if handle_greeting(user_input):
         return True
-    if handle_time(user_input):
-        return True
-    if handle_date(user_input):
-        return True
+    
     if handle_study_mode(user_input):
         return True
     # Memory delete

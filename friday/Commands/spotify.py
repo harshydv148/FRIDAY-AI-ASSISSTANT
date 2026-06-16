@@ -84,43 +84,102 @@ def play_song(query: str):
 
     threading.Thread(target=_find_and_play, daemon=True).start()
 
-def play_pause():
-    """Space key se play/pause toggle karo."""
+def _focus_browser():
+    """Browser window focus karo — minimized ho toh bhi."""
     try:
-        pyautogui.press('space')
-        speak("Done, boss.")
+        import pygetwindow as gw
+        import time
+
+        windows = gw.getAllWindows()
+        
+        # YouTube wali window pehle
+        for w in windows:
+            if 'youtube' in w.title.lower():
+                if w.isMinimized:
+                    w.restore()  # Minimize se bahar
+                    time.sleep(0.3)
+                w.activate()
+                time.sleep(0.5)
+                return True
+
+        # Chrome koi bhi
+        for w in windows:
+            if 'chrome' in w.title.lower() and w.title:
+                if w.isMinimized:
+                    w.restore()
+                    time.sleep(0.3)
+                w.activate()
+                time.sleep(0.5)
+                return True
+
+        return False
     except Exception as e:
-        speak("Couldn't control music, boss.")
+        print(f"Focus error: {e}")
+        return False
+    
+def play_pause():
+    try:
+        if _focus_browser():
+            pyautogui.press('k')  # YouTube shortcut
+            speak("Done, boss.")
+        else:
+            speak("YouTube not open, boss.")
+    except Exception as e:
+        speak("Couldn't pause, boss.")
 
 
 def next_track():
-    """Next track — Shift+N (YouTube Music shortcut)."""
     try:
-        pyautogui.hotkey('shift', 'n')
-        speak("Next track, boss.")
+        if _focus_browser():
+            pyautogui.hotkey('shift', 'n')
+            speak("Next, boss.")
+        else:
+            speak("YouTube not open, boss.")
     except Exception as e:
         speak("Couldn't skip, boss.")
 
 
 def previous_track():
-    """Previous track — Shift+P (YouTube Music shortcut)."""
     try:
-        pyautogui.hotkey('shift', 'p')
-        speak("Previous track, boss.")
+        if _focus_browser():
+            pyautogui.hotkey('shift', 'p')
+            speak("Previous, boss.")
+        else:
+            speak("YouTube not open, boss.")
     except Exception as e:
         speak("Couldn't go back, boss.")
-
 
 def handle_spotify_command(user_input: str) -> bool:
     u = user_input.lower().strip()
 
     # Play specific song
     play_triggers = [
-        "play ", "chalao ", "gaana chalao",
-        "song play karo", "music play karo",
-        "play song", "bajao ", "search song",
+        "play song", "play music", "chalao ",
+        "gaana chalao", "song play karo",
+        "music play karo", "bajao ", "search song",
         "youtube music", "gaana dhundho",
+        "gaana bajao", "music bajao",
     ]
+
+    # "play" akela ya "play a game" jaisi cheezein music nahi hain
+    music_context = any(t in u for t in play_triggers)
+
+    # "play X" — X song jaisa lage toh music
+    if u.startswith("play ") and not music_context:
+        remainder = u.replace("play ", "").strip()
+        # Game/video jaisi cheezein exclude karo
+        non_music = [
+            "game", "video", "movie", "a game",
+            "something", "this", "that",
+        ]
+        if any(nm in remainder for nm in non_music):
+            return False
+        # Short query — song name lagta hai
+        if len(remainder.split()) <= 5:
+            play_song(remainder)
+            return True
+        return False
+
     for trigger in play_triggers:
         if trigger in u:
             query = u
