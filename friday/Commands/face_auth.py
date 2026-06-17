@@ -1,6 +1,16 @@
 """
 Face Authentication — mediapipe se Harsh ko identify karna.
 """
+import os
+import sys
+
+# MediaPipe C++ logs file mein redirect karo
+os.environ["GLOG_log_dir"] = os.path.join(os.path.dirname(__file__), "..", "..")
+os.environ["GLOG_minloglevel"] = "3"
+os.environ["GLOG_logtostderr"] = "0"
+os.environ["GLOG_alsologtostderr"] = "0"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"
 
 import os
 import json
@@ -8,6 +18,10 @@ import numpy as np
 import cv2
 import mediapipe as mp
 from friday.voice import speak
+import os
+os.environ["GLOG_minloglevel"] = "3"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 
 FACE_DATA_FILE = "friday_face_data.json"
 
@@ -17,25 +31,28 @@ mp_face_mesh = mp.solutions.face_mesh
 
 def _get_face_landmarks(frame) -> list | None:
     """Frame se face landmarks extract karo."""
-    with mp_face_mesh.FaceMesh(
-        static_image_mode=True,
-        max_num_faces=1,
-        refine_landmarks=True,
-        min_detection_confidence=0.5,
-    ) as face_mesh:
+    try:
+        with mp_face_mesh.FaceMesh(
+            static_image_mode=True,
+            max_num_faces=1,
+            refine_landmarks=False,  # True se crash hota tha
+            min_detection_confidence=0.5,
+        ) as face_mesh:
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            results = face_mesh.process(rgb)
 
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = face_mesh.process(rgb)
+            if not results.multi_face_landmarks:
+                return None
 
-        if not results.multi_face_landmarks:
-            return None
+            landmarks = results.multi_face_landmarks[0]
+            points = []
+            for lm in landmarks.landmark:
+                points.append([lm.x, lm.y, lm.z])
 
-        landmarks = results.multi_face_landmarks[0]
-        points = []
-        for lm in landmarks.landmark:
-            points.append([lm.x, lm.y, lm.z])
-
-        return points
+            return points
+    except Exception as e:
+        print(f"Face mesh error: {e}")
+        return None
 
 
 def _landmarks_to_vector(landmarks: list) -> np.ndarray:
@@ -93,46 +110,45 @@ def register_face() -> bool:
 
 
 def verify_face() -> str:
-    """
-    Current face check karo — boss hai ya nahi.
-    Returns: "boss", "unknown", "no_face"
-    """
     if not os.path.exists(FACE_DATA_FILE):
         return "not_registered"
 
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        return "no_camera"
+    try:
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            return "no_camera"
 
-    ret, frame = cap.read()
-    cap.release()
+        ret, frame = cap.read()
+        cap.release()
 
-    if not ret:
+        if not ret:
+            return "no_face"
+
+        landmarks = _get_face_landmarks(frame)
+        if not landmarks:
+            return "no_face"
+
+        current_vector = _landmarks_to_vector(landmarks)
+
+        with open(FACE_DATA_FILE, "r") as f:
+            data = json.load(f)
+
+        boss_vector = np.array(data["boss_face"])
+
+        similarity = np.dot(current_vector, boss_vector) / (
+            np.linalg.norm(current_vector) * np.linalg.norm(boss_vector) + 1e-6
+        )
+
+        print(f"🔍 Face similarity: {similarity:.3f}")
+
+        if similarity > 0.97:
+            return "boss"
+        else:
+            return "unknown"
+
+    except Exception as e:
+        print(f"Face verify error: {e}")
         return "no_face"
-
-    landmarks = _get_face_landmarks(frame)
-    if not landmarks:
-        return "no_face"
-
-    current_vector = _landmarks_to_vector(landmarks)
-
-    with open(FACE_DATA_FILE, "r") as f:
-        data = json.load(f)
-
-    boss_vector = np.array(data["boss_face"])
-
-    # Cosine similarity
-    similarity = np.dot(current_vector, boss_vector) / (
-        np.linalg.norm(current_vector) * np.linalg.norm(boss_vector) + 1e-6
-    )
-
-    print(f"🔍 Face similarity: {similarity:.3f}")
-
-    # Threshold — adjust based on testing
-    if similarity > 0.97:
-        return "boss"
-    else:
-        return "unknown"
 
 
 def handle_face_command(user_input: str) -> bool:
@@ -215,3 +231,43 @@ def clear_intruder_log():
     if os.path.exists(INTRUDER_LOG_FILE):
         with open(INTRUDER_LOG_FILE, "w") as f:
             json.dump([], f)
+
+def verify_face_silent() -> str:
+    """Face verify karo — MediaPipe logs suppress karke."""
+    import subprocess
+    import sys
+    import json
+
+    script = """
+import os
+os.environ["GLOG_minloglevel"] = "3"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"
+
+import sys
+import warnings
+warnings.filterwarnings("ignore")
+
+# Stderr suppress
+import io
+sys.stderr = io.StringIO()
+
+from friday.Commands.face_auth import verify_face
+result = verify_face()
+print(result)
+"""
+
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        output = result.stdout.strip()
+        if output in ["boss", "unknown", "no_face", "not_registered", "no_camera"]:
+            return output
+        return "no_face"
+    except Exception as e:
+        print(f"Face verify error: {e}")
+        return "no_face"

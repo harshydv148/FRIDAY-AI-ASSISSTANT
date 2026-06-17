@@ -2,32 +2,26 @@
 Network Speed — internet speed check karna.
 """
 
-import threading
-from friday.voice import speak
+from friday.voice import speak, disable_mic, enable_mic
 
 
 def check_speed():
     """Internet speed check karo."""
     try:
         import speedtest
-
-        speak("Running speed test, give me a moment boss.")
         print("🌐 Running speed test...")
-
         st = speedtest.Speedtest()
         st.get_best_server()
 
-        # Download
-        download = st.download() / 1_000_000  # Mbps
-        # Upload
-        upload = st.upload() / 1_000_000  # Mbps
-        # Ping
+        download = st.download() / 1_000_000
+        upload = st.upload() / 1_000_000
         ping = st.results.ping
 
         print(f"📶 Download: {download:.1f} Mbps")
         print(f"📤 Upload: {upload:.1f} Mbps")
         print(f"🏓 Ping: {ping:.0f} ms")
 
+        enable_mic()
         speak(
             f"Download is {download:.1f} Mbps, "
             f"upload is {upload:.1f} Mbps, "
@@ -52,7 +46,10 @@ def handle_network_command(user_input: str) -> bool:
     if not any(t in u for t in speed_triggers):
         return False
 
-    # Background mein chalao — blocking hai
-    thread = threading.Thread(target=check_speed, daemon=True)
-    thread.start()
+    speak("Running speed test, give me a moment boss.")
+    import time
+    time.sleep(3)  # Speak + echo settle hone do
+    disable_mic()
+    check_speed()
+    enable_mic()
     return True

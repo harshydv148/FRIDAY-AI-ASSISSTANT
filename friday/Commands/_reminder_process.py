@@ -2,7 +2,7 @@
 import time
 from datetime import datetime
 
-target = datetime.strptime("2026-05-19 10:54:05", "%Y-%m-%d %H:%M:%S")
+target = datetime.strptime("2026-06-16 16:16:05", "%Y-%m-%d %H:%M:%S")
 now = datetime.now()
 wait = (target - now).total_seconds()
 
@@ -44,7 +44,7 @@ try:
     # Content
     content_label = tk.Label(
         root,
-        text="1 minut mein remind",
+        text="new gamer 1 second mein",
         font=("Consolas", 13),
         fg="#ffffff",
         bg="#0b0b0b",
@@ -80,7 +80,7 @@ try:
     import uuid
 
     pygame.mixer.init()
-    tts = gTTS(text="Boss, reminder. 1 minut mein remind", lang="en")
+    tts = gTTS(text="Boss, reminder. new gamer 1 second mein", lang="en")
     filename = f"rem_{uuid.uuid4().hex[:6]}.mp3"
     tts.save(filename)
     pygame.mixer.music.load(filename)

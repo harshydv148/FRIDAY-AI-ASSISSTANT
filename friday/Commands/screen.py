@@ -104,67 +104,54 @@ def read_screen() -> str:
         return "\n".join(clean_lines).strip()
 
 
-def handle_explain_screen():
-    screen_text = read_screen()
-    if not screen_text.strip():
-        speak("Screen pe kuch readable nahi mila boss.")
-        return
-
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {"role": "system", "content": SCREEN_EXPLAIN_PROMPT},
-            {"role": "user", "content": screen_text},
-        ],
-    )
-    reply = response.choices[0].message.content
-    sentences = [s.strip() for s in reply.replace("\n", " ").split(".") if s.strip()]
-    short_reply = ". ".join(sentences[:2]) + "." if sentences else reply
-    if should_speak(short_reply):
-        speak(short_reply)
-
-
-def handle_summarize_screen():
-    screen_text = read_screen()
-    if not screen_text.strip():
-        speak("Screen pe kuch readable nahi mila boss.")
-        return
-
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {"role": "system", "content": SCREEN_SUMMARIZE_PROMPT},
-            {"role": "user", "content": f"Summarize this screen content:\n\n{screen_text}"},
-        ],
-    )
-    reply = response.choices[0].message.content
-    sentences = [s.strip() for s in reply.replace("\n", " ").split(".") if s.strip()]
-    short_reply = ". ".join(sentences[:2]) + "." if sentences else reply
-    speak(short_reply)
-
-
 def handle_professional_screen():
     screen_text = read_screen()
     if not screen_text.strip():
         speak("Screen pe kuch readable nahi mila boss.")
         return
 
+    # System UI elements filter karo
+    import re
+    clean_lines = []
+    skip_patterns = [
+        r'\d{1,2}:\d{2}',
+        r'^\d+$',
+        r'BIS|Bureau|Standards',
+        r'copyright|©|®|™',
+        r'Windows|Microsoft',
+        r'^[A-Z]{2,}\s*$',
+        r'wifi|battery|volume',
+    ]
+
+    for line in screen_text.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        skip = False
+        for pattern in skip_patterns:
+            if re.search(pattern, line, re.IGNORECASE):
+                skip = True
+                break
+        if not skip and len(line) > 3:
+            clean_lines.append(line)
+
+    screen_text = '\n'.join(clean_lines)
+
+    if not screen_text.strip():
+        speak("No readable content found, boss.")
+        return
+
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": SCREEN_PROFESSIONAL_PROMPT},
-            {"role": "user", "content": f"Rewrite this text professionally, every single line:\n\n{screen_text}"},
+            {"role": "user", "content": f"Rewrite this text professionally:\n\n{screen_text}"},
         ],
     )
     reply = response.choices[0].message.content
-    print("FRIDAY:", reply)
+    print("Professional:\n", reply)
 
-    if should_speak(reply):
-        sentences = [s.strip() for s in reply.replace("\n", " ").split(".") if s.strip()]
-        short_reply = ". ".join(sentences[:2]) + "." if sentences else reply
-        speak(short_reply)
-
-    # Notepad mein paste karo
+    # Paste karo — notepad ya clipboard
     try:
         import pygetwindow as gw
         notepad_windows = [
@@ -173,21 +160,19 @@ def handle_professional_screen():
         ]
         if notepad_windows:
             notepad_windows[0].activate()
-            time.sleep(0.8)
+            time.sleep(0.5)
             pyautogui.hotkey("ctrl", "a")
             time.sleep(0.3)
             pyperclip.copy(reply)
             pyautogui.hotkey("ctrl", "v")
-            speak("Notepad updated, boss.")
         else:
             pyperclip.copy(reply)
-            speak("Copied to clipboard boss, Ctrl V se paste kar lo.")
     except Exception as e:
-        print(f"Paste error: {e}")
         pyperclip.copy(reply)
-        speak("Copied to clipboard boss.")
 
+    speak("Done boss, updated.")
 
+    
 # Trigger lists
 EXPLAIN_TRIGGERS = [
     "explain screen", "plain screen", "a plane screen",

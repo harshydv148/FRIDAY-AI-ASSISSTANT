@@ -21,6 +21,15 @@ PIPER_MODEL = "piper_models/en_US-amy-medium.onnx"
 # Piper voice — ek baar load karo
 _piper_voice = None
 
+_mic_disabled = False
+
+def disable_mic():
+    global _mic_disabled
+    _mic_disabled = True
+
+def enable_mic():
+    global _mic_disabled
+    _mic_disabled = False
 
 def _load_piper():
     """Piper model load karo — ek baar."""
@@ -106,6 +115,10 @@ def _gtts_speak(text: str):
 
 def listen(silent: bool = False) -> str | None:
     """Microphone se voice input lo."""
+    if _mic_disabled:
+        import time
+        time.sleep(0.5)
+        return None
     r = sr.Recognizer()
     r.energy_threshold = 300
     r.dynamic_energy_threshold = True
