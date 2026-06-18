@@ -1,167 +1,348 @@
-# F.R.I.D.A.Y. — Tony Stark Demo
+# F.R.I.D.A.Y. 🤖
 
 > *"Fully Responsive Intelligent Digital Assistant for You"*
 
-A Tony Stark-inspired AI assistant split into two cooperating pieces:
+A Tony Stark-inspired personal AI voice assistant built with Python — modular, offline-capable, and genuinely smart.
 
-| Component | What it is |
-|-----------|-----------|
-| **MCP Server** (`uv run friday`) | A [FastMCP](https://github.com/jlowin/fastmcp) server that exposes tools (news, web search, system info, …) over SSE. Think of it as the Stark Industries backend — it does the actual work. |
-| **Voice Agent** (`uv run friday_voice`) | A [LiveKit Agents](https://github.com/livekit/agents) voice pipeline that listens to your microphone, reasons with an LLM (Gemini 2.5 Flash by default), and speaks back with OpenAI TTS — all while pulling tools from the MCP server in real time. |
+Ever since watching Iron Man, I wanted my own FRIDAY — just like Tony Stark's AI assistant. This project is my attempt at building that dream, one feature at a time.
 
-Demo: [Instagram reel](https://www.instagram.com/p/DW2HjYtkwg_/)
+> *"Sometimes you gotta run before you can walk."* — Tony Stark
 
-[![Demo Video Guide](https://img.youtube.com/vi/mMY9swqe3BI/maxresdefault.jpg)](https://www.youtube.com/watch?v=mMY9swqe3BI)
+Built by **Harsh Yadav**, a BCA student from Haryana — using AI tools, step by step, entirely from his own ideas. This project demonstrates how a non-programmer can build production-quality software through AI collaboration.
 
 ---
 
-## How it works
+## 📸 Preview
 
 ```
-Microphone ──► STT (Sarvam Saaras v3)
-                    │
-                    ▼
-             LLM (Gemini 2.5 Flash)  ◄──────► MCP Server (FastMCP / SSE)
-                    │                              ├─ get_world_news
-                    ▼                              ├─ open_world_monitor
-             TTS (OpenAI nova)                     ├─ search_web
-                    │                              └─ …more tools
-                    ▼
-             Speaker / LiveKit room
-```
+FRIDAY online
+✅ Piper Amy loaded — voice ready.
+🎤 Listening...
 
-The voice agent connects to the MCP server via SSE at `http://127.0.0.1:8000/sse` (auto-resolved to the Windows host IP when running inside WSL).
+You: friday open instagram
+FRIDAY: Opening instagram, boss.
+
+You: summarise screen
+FRIDAY: Boss, this appears to be a LeetCode problem about...
+
+You: help me solve this
+🎓 GUIDE MODE: This is a classic DFS problem boss...
+
+You: latest news kya hai
+🔍 Searching: top world news headlines today...
+FRIDAY: Here are the top stories boss — ...
+```
 
 ---
 
-## Project structure
+## ✨ Features
+
+### 🎙️ Voice & AI
+- Wake word detection — say **"Friday"** to activate
+- Natural language understanding — Hindi, English, Hinglish
+- Smart memory — remembers your personal info across sessions
+- Conversation history — picks up where you left off
+- ADA-inspired personality — witty, confident, natural
+- Self-aware — knows her own codebase and features
+- Standby mode — auto and manual both
+
+### 🖥️ System Control
+- Open & close apps/websites by voice
+- Volume control — up, down, mute, unmute, set exact level
+- Lock screen, shutdown, restart
+- Close all apps (with process protection — won't close itself)
+- Screenshot capture with auto-save to Desktop
+- Network speed check
+
+### 📋 Productivity
+- Smart Notes with reminders — popup + voice alert even in standby
+- To-Do list management — add, complete, delete tasks
+- Timer, Alarm, Stopwatch (floating window)
+- Clipboard history — track & paste copied items by index
+- Study mode — opens all study sites at once
+
+### 🌐 Web & Information
+- Real-time search — live news, scores, prices (DuckDuckGo)
+- Weather with rain detection (OpenWeatherMap)
+- YouTube Music direct play (yt-dlp — no browser needed)
+- Music controls — pause, next, previous
+
+### 💻 Developer Tools
+- Git commands — status, add, commit, push, pull, branch, checkout
+- OCR screen reading — explain, summarize, rewrite professionally
+- LeetCode guide mode — Socratic teaching, hints, pattern recognition
+- Direct solve mode — complete solution pasted at cursor
+- Type command — AI generates content and pastes it anywhere
+- Camera feed — webcam + Groq Vision for object identification
+
+### 🔍 Smart Search
+- Real-time web search via DuckDuckGo (no API key needed)
+- Live news headlines
+- Stock/crypto prices
+- Sports scores
+- Any current information
+
+---
+
+## 🏗️ Architecture
 
 ```
 friday-tony-stark-demo/
-├── server.py           # uv run friday  → starts the MCP server (SSE on :8000)
-├── agent_friday.py     # uv run friday_voice → starts the LiveKit voice agent
-├── pyproject.toml
-├── .env.example        # copy → .env and fill in your keys
+├── cli_friday.py              # Main loop — entry point
 │
-└── friday/             # MCP server package
-    ├── config.py       # env-var loading & app-wide settings
-    ├── tools/          # MCP tools (callable by the LLM)
-    │   ├── web.py      # search_web, fetch_url, get_world_news, open_world_monitor
-    │   ├── system.py   # get_current_time, get_system_info
-    │   └── utils.py    # format_json, word_count
-    ├── prompts/        # MCP prompt templates (summarize, explain_code, …)
-    └── resources/      # MCP resources exposed to clients (friday://info)
+└── friday/
+    ├── AI/
+    │   ├── intent.py          # Natural language intent detection (Groq)
+    │   └── chat.py            # Conversational AI (Groq llama-3.3-70b)
+    │
+    ├── Automation/
+    │   ├── apps.py            # App open/close, process management
+    │   ├── browser.py         # Browser & tab control
+    │   ├── system.py          # Shutdown, restart, lock
+    │   └── volume.py          # Volume control (PowerShell)
+    │
+    ├── Commands/
+    │   ├── screen.py          # OCR screen reading, explain, solve, guide
+    │   ├── files.py           # File search, type command
+    │   ├── shortcuts.py       # Time, date, standby, study mode
+    │   ├── screenshot.py      # Screenshot capture
+    │   ├── timer.py           # Timer, alarm, stopwatch
+    │   ├── notes.py           # Smart notes + reminders
+    │   ├── todo.py            # To-do list
+    │   ├── weather.py         # Weather (OpenWeatherMap)
+    │   ├── spotify.py         # YouTube Music control
+    │   ├── git_commands.py    # Git operations
+    │   ├── network.py         # Network speed check
+    │   ├── clipboard.py       # Clipboard history
+    │   ├── camera.py          # Webcam + Groq Vision
+    │   └── search.py          # Real-time web search
+    │
+    ├── Personality/
+    │   ├── prompts.py         # All system prompts
+    │   └── self_knowledge.py  # Friday reads her own codebase
+    │
+    ├── app_config.py          # App & website configurations
+    ├── memory.py              # Persistent memory + conversation history
+    ├── voice.py               # Piper TTS + Google STT
+    └── state.py               # Wake/standby state management
 ```
 
 ---
 
-## Quick start
+## ⚡ Tech Stack
+
+| Component | Technology | Cost |
+|-----------|-----------|------|
+| **STT** | Google Speech Recognition | Free |
+| **LLM** | Groq — llama-3.3-70b-versatile | Free tier |
+| **TTS** | Piper Amy (offline) | Free forever |
+| **Vision** | Groq Vision — llama-4-scout | Free tier |
+| **Search** | DuckDuckGo | Free, no API key |
+| **Weather** | OpenWeatherMap API | Free tier |
+| **Music** | yt-dlp + YouTube | Free |
+| **Package Manager** | uv | Free |
+
+> **Total running cost: $0** — entirely free stack.
+
+---
+
+## 🚀 Quick Start
 
 ### 1. Prerequisites
 
 - Python ≥ 3.11
-- [`uv`](https://github.com/astral-sh/uv) — `pip install uv` or `curl -Lsf https://astral.sh/uv/install.sh | sh`
-- A [LiveKit Cloud](https://cloud.livekit.io) project (free tier works)
+- [`uv`](https://github.com/astral-sh/uv) — `pip install uv`
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) — for screen reading
+- [FFmpeg](https://ffmpeg.org/) — for music playback (`winget install ffmpeg`)
 
-### 2. Clone & install
+### 2. Clone & Install
 
 ```bash
-git clone https://github.com/SAGAR-TAMANG/friday-tony-stark-demo.git
-cd friday-tony-stark-demo
-uv sync          # creates .venv and installs all dependencies
+git clone https://github.com/harshydv148/FRIDAY-AI-ASSISSTANT.git
+cd FRIDAY-AI-ASSISSTANT
+uv sync
 ```
 
-### 3. Set up environment
+### 3. Set up Environment
 
 ```bash
 cp .env.example .env
-# Open .env and fill in your API keys (see the section below)
 ```
 
-### 4. Run — two terminals
+Fill in your API keys:
 
-**Terminal 1 — MCP server** (must start first)
+| Variable | Required | Where to get |
+|----------|----------|-------------|
+| `GROQ_API_KEY` | ✅ | [console.groq.com](https://console.groq.com) — free |
+| `WEATHER_API_KEY` | optional | [openweathermap.org](https://openweathermap.org/api) — free |
+| `WEATHER_CITY` | optional | Your city name (e.g. `Rewari`) |
+| `GOOGLE_API_KEY` | optional | [aistudio.google.com](https://aistudio.google.com) — for camera vision |
+
+### 4. Download Piper Voice Model
 
 ```bash
-uv run friday
+python -c "
+import requests, os
+os.makedirs('piper_models', exist_ok=True)
+base = 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/'
+for f in ['en_US-amy-medium.onnx', 'en_US-amy-medium.onnx.json']:
+    print(f'Downloading {f}...')
+    r = requests.get(base + f)
+    open(f'piper_models/{f}', 'wb').write(r.content)
+print('Done!')
+"
 ```
 
-Starts the FastMCP server on `http://127.0.0.1:8000/sse`. The voice agent connects here to fetch its tools.
-
-**Terminal 2 — Voice agent**
+### 5. Run
 
 ```bash
-uv run friday_voice
+python cli_friday.py
 ```
 
-Starts the LiveKit voice agent in **dev mode** — it joins a LiveKit room and begins listening. Open the [LiveKit Agents Playground](https://agents-playground.livekit.io) and connect to your room to talk to FRIDAY.
+Say **"Friday"** to wake her up! 🎤
 
 ---
 
-## `uv run friday` vs `uv run friday_voice`
+## 🎤 Voice Commands
 
-| Command | Entry point | What it does |
-|---------|------------|--------------|
-| `uv run friday` | `server.py → main()` | Launches the **FastMCP server** over SSE transport on port 8000. This is the "brain backend" — it registers all tools, prompts, and resources that the LLM can call. |
-| `uv run friday_voice` | `agent_friday.py → dev()` | Launches the **LiveKit voice agent**. It builds the STT / LLM / TTS pipeline, connects to your LiveKit room, and wires up the MCP server as a tool source. The `dev()` wrapper auto-injects the `dev` CLI flag so you don't have to type it manually. |
+### Basic
+```
+friday                          → wake up
+friday open chrome              → open Chrome
+friday close all apps           → close everything
+exit                            → shut down Friday
+```
 
-> Both processes must run **simultaneously**. The voice agent calls the MCP server in real time whenever it needs a tool (e.g. fetching news).
+### System
+```
+volume up / volume down
+volume 50 karo
+mute / unmute
+screenshot lo
+lock screen
+network speed check
+```
 
----
+### Productivity
+```
+note karo meeting hai kal 5 baje    → smart reminder at 5 PM
+show notes
+add task DSA practice karna hai
+todo list
+complete DSA
+timer 25 minutes
+stopwatch start
+pomodoro
+clipboard dikhao
+clipboard 2
+```
 
-## Environment variables
+### Screen & AI
+```
+explain screen
+summarise screen
+make screen professional
+help me solve this              → LeetCode guide mode (Socratic)
+solve screen                    → direct solution pasted
+type merge sort                 → AI generates + pastes code
+```
 
-Copy `.env.example` → `.env` and fill in the values below.
+### Music
+```
+play shape of you
+pause / resume
+next song
+previous song
+```
 
-| Variable | Required | Where to get it |
-|----------|----------|----------------|
-| `LIVEKIT_URL` | ✅ | [LiveKit Cloud dashboard](https://cloud.livekit.io) → your project URL |
-| `LIVEKIT_API_KEY` | ✅ | LiveKit Cloud → API Keys |
-| `LIVEKIT_API_SECRET` | ✅ | LiveKit Cloud → API Keys |
-| `GROQ_API_KEY` | optional | [console.groq.com](https://console.groq.com) — only needed if you switch `LLM_PROVIDER` to `"groq"` |
-| `SARVAM_API_KEY` | ✅ (default STT) | [dashboard.sarvam.ai](https://dashboard.sarvam.ai) |
-| `OPENAI_API_KEY` | ✅ (default TTS) | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
-| `DEEPGRAM_API_KEY` | optional | [console.deepgram.com](https://console.deepgram.com) |
-| `GOOGLE_APPLICATION_CREDENTIALS` | optional | GCP service-account JSON path — only for `STT_PROVIDER = "google"` |
-| `GOOGLE_API_KEY` | ✅ (default LLM) | [aistudio.google.com](https://aistudio.google.com/projects) |
-| `SUPABASE_URL` | optional | [supabase.com](https://supabase.com) — for the ticketing tool |
-| `SUPABASE_API_KEY` | optional | Supabase project → API settings |
+### Search & Info
+```
+latest news kya hai
+Bitcoin price abhi
+IPL score kya hai
+weather kya hai
+will it rain
+```
 
----
+### Git
+```
+git status
+commit karo fix login bug
+git push
+git pull
+current branch
+new branch feature-auth
+```
 
-## Switching providers
-
-Open `agent_friday.py` and change the provider constants at the top:
-
-```python
-STT_PROVIDER = "sarvam"   # "sarvam" | "whisper"
-LLM_PROVIDER = "gemini"   # "gemini" | "openai"
-TTS_PROVIDER = "openai"   # "openai" | "sarvam"
+### Memory
+```
+I like biryani                  → auto-saved
+my name is Harsh                → auto-saved
+what's my favourite food        → recalled from memory
 ```
 
 ---
 
-## Adding a new tool
+## 🧠 How Memory Works
 
-1. Create or open a file in `friday/tools/`
-2. Define a `register(mcp)` function and decorate tools with `@mcp.tool()`
-3. Import and call `register(mcp)` inside `friday/tools/__init__.py`
+Friday remembers two types of information:
 
-The MCP server will pick it up on next start.
+**Personal Facts** — auto-saved when you mention them:
+```
+"I like biryani"      → saves favourite_food = biryani
+"I am 20 years old"   → saves age = 20
+"my city is Delhi"    → saves city = Delhi
+```
 
----
-
-## Tech stack
-
-- **[FastMCP](https://github.com/jlowin/fastmcp)** — MCP server framework
-- **[LiveKit Agents](https://github.com/livekit/agents)** — real-time voice pipeline
-- **Sarvam Saaras v3** — STT (Indian-English optimised)
-- **Google Gemini 2.5 Flash** — LLM
-- **OpenAI TTS** (`nova` voice) — TTS
-- **[uv](https://github.com/astral-sh/uv)** — fast Python package manager
+**Conversation History** — last 20 conversations saved across sessions.
+Friday picks up where you left off — even after restart.
 
 ---
 
-## License
+## ⚠️ Known Limitations
 
-MIT
+- **WhatsApp automation** — limited without premium API
+- **Spotify control** — requires Spotify Premium for playback API
+- **Gemini Vision** — free tier quota limited (uses Groq Vision as fallback)
+- **Screen reading** — OCR accuracy depends on screen content and font
+- **Speech recognition** — requires internet connection (Google STT)
+- **Music controls** (pause/next) — requires YouTube to be open in browser
+
+---
+
+## 🔮 Future Plans
+
+- [ ] Web Agent — autonomous browser control (Playwright)
+- [ ] GUI interface — PyQt6 dashboard
+- [ ] Email integration — read & send emails
+- [ ] Google Calendar — schedule management
+- [ ] Mobile companion app
+- [ ] Multi-language TTS
+
+---
+
+## 📁 Data Files Created
+
+| File | Purpose |
+|------|---------|
+| `memory.json` | Personal facts + conversation history |
+| `friday_notes.json` | Smart notes with reminders |
+| `friday_todos.json` | To-do list |
+| `piper_models/` | Offline TTS voice model |
+
+---
+
+## 🙏 Inspiration
+
+Ever since watching Iron Man, I wanted my own FRIDAY — just like Tony Stark's AI assistant.
+This project is my attempt at building that dream, one feature at a time.
+
+> *"Sometimes you gotta run before you can walk."* — Tony Stark
+
+---
+
+## 📄 License
+
+MIT License — feel free to use, but give credit to Harsh Yadav.
+
+© 2026 Harsh Yadav
