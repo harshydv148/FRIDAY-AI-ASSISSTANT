@@ -28,7 +28,45 @@ from friday.Personality.prompts import (
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
+def handle_explain_screen():
+    screen_text = read_screen()
+    if not screen_text.strip():
+        speak("Screen pe kuch readable nahi mila boss.")
+        return
 
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {"role": "system", "content": SCREEN_EXPLAIN_PROMPT},
+            {"role": "user", "content": screen_text},
+        ],
+    )
+    reply = response.choices[0].message.content
+    sentences = [s.strip() for s in reply.replace("\n", " ").split(".") if s.strip()]
+    short_reply = ". ".join(sentences[:2]) + "." if sentences else reply
+    if should_speak(short_reply):
+        speak(short_reply)
+
+
+def handle_summarize_screen():
+    screen_text = read_screen()
+    if not screen_text.strip():
+        speak("Screen pe kuch readable nahi mila boss.")
+        return
+
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {"role": "system", "content": SCREEN_SUMMARIZE_PROMPT},
+            {"role": "user", "content": f"Summarize this screen content:\n\n{screen_text}"},
+        ],
+    )
+    reply = response.choices[0].message.content
+    sentences = [s.strip() for s in reply.replace("\n", " ").split(".") if s.strip()]
+    short_reply = ". ".join(sentences[:2]) + "." if sentences else reply
+    speak(short_reply)
+    
+      
 def read_screen() -> str:
     with MSS() as sct:
         monitor = sct.monitors[1]

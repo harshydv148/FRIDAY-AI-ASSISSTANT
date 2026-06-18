@@ -2,6 +2,7 @@
 Voice — STT aur TTS for FRIDAY.
 Piper TTS Amy — offline, fast, no credits needed.
 Google Speech Recognition for STT.
+Interrupt support — user bol sakta hai jab Friday bol rahi ho.
 """
 
 import os
@@ -9,6 +10,7 @@ import time
 import uuid
 import wave
 import tempfile
+import threading
 import numpy as np
 import sounddevice as sd
 import speech_recognition as sr
@@ -18,21 +20,34 @@ load_dotenv()
 
 PIPER_MODEL = "piper_models/en_US-amy-medium.onnx"
 
-# Piper voice — ek baar load karo
 _piper_voice = None
-
 _mic_disabled = False
+_speaking = False
+_interrupt_flag = False
+
 
 def disable_mic():
     global _mic_disabled
     _mic_disabled = True
 
+
 def enable_mic():
     global _mic_disabled
     _mic_disabled = False
 
+
+def is_speaking() -> bool:
+    return _speaking
+
+
+def interrupt_speech():
+    """Friday ki speech rok do."""
+    global _interrupt_flag
+    _interrupt_flag = True
+    sd.stop()
+
+
 def _load_piper():
-    """Piper model load karo — ek baar."""
     global _piper_voice
     if _piper_voice is None:
         try:
@@ -44,12 +59,13 @@ def _load_piper():
 
 
 def _init_gemini():
-    """Compatibility function — Piper load karo."""
     _load_piper()
 
 
 def speak(text: str):
-    """Piper Amy se text speak karo."""
+    """Piper Amy se text speak karo — interruptible."""
+    global _speaking, _interrupt_flag
+
     print(f"FRIDAY: {text}")
 
     if _piper_voice is None:
@@ -59,36 +75,41 @@ def speak(text: str):
         _gtts_speak(text)
         return
 
+    _interrupt_flag = False
+    _speaking = True
+
     try:
-        # Temp WAV file mein save karo
-        with tempfile.NamedTemporaryFile(
-            suffix=".wav", delete=False
-        ) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             tmp_path = tmp.name
 
         with wave.open(tmp_path, 'wb') as w:
             _piper_voice.synthesize_wav(text, w)
 
-        # Play karo
         with wave.open(tmp_path) as w:
             frames = w.readframes(w.getnframes())
             rate = w.getframerate()
 
         audio = np.frombuffer(frames, dtype=np.int16)
+
         try:
             sd.stop()
         except:
             pass
+
         time.sleep(0.1)
-        sd.play(audio, samplerate=rate)
-        sd.wait()
-        
-        # Cleanup
+
+        if not _interrupt_flag:
+            sd.play(audio, samplerate=rate)
+            sd.wait()
+
         os.remove(tmp_path)
 
     except Exception as e:
         print(f"Piper speak error: {e}")
         _gtts_speak(text)
+    finally:
+        _speaking = False
+        _interrupt_flag = False
 
 
 def _gtts_speak(text: str):
@@ -114,11 +135,13 @@ def _gtts_speak(text: str):
 
 
 def listen(silent: bool = False) -> str | None:
-    """Microphone se voice input lo."""
+    """Microphone se voice input lo — interrupt support ke saath."""
+    global _interrupt_flag
+
     if _mic_disabled:
-        import time
         time.sleep(0.5)
         return None
+
     r = sr.Recognizer()
     r.energy_threshold = 300
     r.dynamic_energy_threshold = True
@@ -134,6 +157,12 @@ def listen(silent: bool = False) -> str | None:
 
     try:
         text = r.recognize_google(audio)
+
+        # Agar Friday bol rahi thi toh interrupt karo
+        if _speaking:
+            print("⚡ Interrupted!")
+            interrupt_speech()
+
         return text
     except sr.UnknownValueError:
         if not silent:
@@ -144,6 +173,7 @@ def listen(silent: bool = False) -> str | None:
         return None
     except Exception:
         return None
+
 
 def should_speak(text: str) -> bool:
     """Check karo text speakable hai ya nahi."""

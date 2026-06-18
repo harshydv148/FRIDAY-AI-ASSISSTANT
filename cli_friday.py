@@ -1,17 +1,42 @@
 import os
-os.environ["GLOG_minloglevel"] = "3"
-os.environ["GLOG_logtostderr"] = "0"
-os.environ["GLOG_alsologtostderr"] = "0"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"
+import time
+import threading
 
-import sys
-# baaki imports neeche
+from friday.voice import interrupt_speech, is_speaking
 
-import os
-os.environ["GLOG_minloglevel"] = "3"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["MEDIAPIPE_DISABLE_GPU"] = "1"
+# Background listener — interrupt ke liye
+def _background_listener():
+    """Background mein sun — agar Friday bol rahi hai toh interrupt karo."""
+    import speech_recognition as sr
+    r = sr.Recognizer()
+    r.energy_threshold = 500
+    
+    while True:
+        try:
+            if is_speaking():
+                with sr.Microphone() as source:
+                    try:
+                        audio = r.listen(source, timeout=1, phrase_time_limit=3)
+                        text = r.recognize_google(audio)
+                        if text:
+                            print(f"⚡ Interrupt detected: {text}")
+                            interrupt_speech()
+                    except:
+                        pass
+            else:
+                time.sleep(0.1)
+        except:
+            time.sleep(0.1)
+
+# Background listener start karo
+_bg_listener = threading.Thread(target=_background_listener, daemon=True)
+_bg_listener.start()
+
+# Baaki imports neeche
+from dotenv import load_dotenv
+# ... rest of imports
+
+
 import time
 import webbrowser
 import sys
