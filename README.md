@@ -8,7 +8,7 @@ Ever since watching Iron Man, I wanted my own FRIDAY — just like Tony Stark's 
 
 > *"Sometimes you gotta run before you can walk."* — Tony Stark
 
-Built by **Harsh Yadav**, a BCA student from Haryana — using AI tools, step by step, entirely from his own ideas. This project demonstrates how a non-programmer can build production-quality software through AI collaboration.
+Built by **Harsh Yadav**, a BCA student from Haryana — designed, architected, and built from scratch with a clear vision of what a real AI assistant should feel like.
 
 ---
 
@@ -42,7 +42,7 @@ FRIDAY: Here are the top stories boss — ...
 - Natural language understanding — Hindi, English, Hinglish
 - Smart memory — remembers your personal info across sessions
 - Conversation history — picks up where you left off
-- ADA-inspired personality — witty, confident, natural
+- Natural personality — witty, confident, feels like talking to a friend
 - Self-aware — knows her own codebase and features
 - Standby mode — auto and manual both
 
