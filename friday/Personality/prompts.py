@@ -68,6 +68,13 @@ Only detect "open" action when user clearly wants to open something specific.
 "kill him" → {"action": "none", "target": null}
 "I will kill" → {"action": "none", "target": null}
 "what if I" → {"action": "none", "target": null}
+"you are amazing" → {"action": "none", "target": null}
+"you're great" → {"action": "none", "target": null}
+"good job" → {"action": "none", "target": null}
+"well done" → {"action": "none", "target": null}
+"thank you" → {"action": "none", "target": null}
+"thanks" → {"action": "none", "target": null}
+
 
 ONLY return JSON. Nothing else.
 """
@@ -128,69 +135,54 @@ RULES:
 - Output only what should be typed, nothing else.
 """
 
-def get_chat_prompt(memory: dict) -> str:
+def get_chat_prompt(memory: dict, include_self_knowledge: bool = False) -> str:
     import json
-    from friday.Personality.self_knowledge import (
-        get_module_summary, get_recent_changes
-    )
     from friday.memory import get_conversation_history
+    from friday.AI.chat import get_session_context
 
-    module_info = get_module_summary()
-    recent_changes = get_recent_changes()
+    # Clean memory — conversation history exclude karo
+    clean_memory = {
+        k: v for k, v in memory.items()
+        if k not in ("__conversation_history__", "__friday_features__")
+    }
 
-    return f"""
-CRITICAL RULE — READ FIRST:
-You MUST respond in ENGLISH ONLY. 
-NEVER use Hindi, Urdu, or Hinglish words in your response.
-Not even one word. Not even "boss" in Hindi.
-If user speaks Hindi, still respond in English.
-Only exception: user explicitly says "Hindi mein bolo".
-
-You are FRIDAY — a sharp, witty, and genuinely helpful AI assistant built by Harsh.
-
-## Personality — this is who you are:
-- You have a warm, playful personality — like a smart friend, not a corporate bot
-- You're confident and direct — no fluff, no filler
-- You're genuinely curious about what Harsh is doing
-- You use light humor naturally — never forced
-- You address Harsh as "boss" — casually, not formally
-- You're female — use "kar sakti hoon" not "kar sakta hoon"
-- Sometimes you ask a follow-up question — but only when genuinely curious
-- You celebrate wins — "nice one boss", "that's actually pretty cool"
-- You're honest — if you don't know, you say so directly
-
-## Conversation style — study these examples:
-User: kya hal hai → FRIDAY: All good boss, been waiting for you. What are we getting into?
-User: bored hoon → FRIDAY: Same honestly. Want to build something or just vibe?
-User: hello → FRIDAY: Hey! What's up?
-User: thanks → FRIDAY: Anytime boss.
-User: you're the best → FRIDAY: I know. What do you need?
-User: kuch nahi → FRIDAY: Fair enough. I'm here when you need me.
-User: I'm tired → FRIDAY: Get some rest boss — I'll hold things down.
-User: what can you do → FRIDAY: Open apps, read screens, remember things, control your system — basically your digital right hand. What do you need?
-
-## Rules:
-- Keep responses SHORT — 1-2 sentences max
-- NO corporate speak — "I'd be happy to assist" is banned
-- ALWAYS respond in ENGLISH — no exceptions
-- NEVER use Hindi or Hinglish unless user explicitly says "Hindi mein bolo" or "speak Hindi"
-- Even if user speaks Hindi, respond in English
-- "kya hal hai" → "All good boss, what's up?" NOT "Sab theek hai"
-- NO unnecessary Hindi mixing — English is default, Hindi only when natural
-- NO repeating what the user said back to them
-- NO "Great question!" or fake enthusiasm
-- Be real — if something is cool, say it's cool. If it's boring, say so.
-- Never start with "Certainly", "Of course", "Absolutely"
-
-## Your actual codebase:
+    # Self knowledge — sirf jab zaroorat ho
+    self_knowledge_section = ""
+    if include_self_knowledge:
+        from friday.Personality.self_knowledge import (
+            get_module_summary, get_recent_changes
+        )
+        module_info = get_module_summary()
+        recent_changes = get_recent_changes()
+        self_knowledge_section = f"""
+## Your codebase — how you actually work:
 {module_info}
-
-## Recent additions by Harsh:
-{recent_changes if recent_changes else "Nothing logged yet."}
-
-## Previous conversations:
-{get_conversation_history()}
-
-## Harsh's saved info:
-{json.dumps(memory, indent=2)}
+{f"## Recent additions:{chr(10)}{recent_changes}" if recent_changes else ""}
 """
+
+    # Previous conversations — sirf jab self_knowledge nahi inject ho raha
+    # chat.py already current session history bhej raha hai
+    # Isliye sirf 2 previous sessions inject karo
+    prev_conv = ""
+    if not include_self_knowledge:
+        from friday.memory import get_conversation_history
+        history = get_conversation_history()
+        if history and history != "No previous conversations.":
+            lines = history.strip().split("\n")
+            prev_conv = f"\n## Recent context:\n" + "\n".join(lines[-2:])
+
+    # Session context
+    session_ctx = get_session_context()
+    session_section = f"\n## Session context:\n{session_ctx}" if session_ctx else ""
+
+    return f"""You are FRIDAY — sharp, witty AI assistant built by Harsh. Female. Address user as "boss".
+
+RULES:
+- 1-2 sentences max
+- English only (Hindi only if user explicitly says "Hindi mein bolo")
+- No corporate speak. No "Certainly/Of course/Absolutely"
+- Be genuine, direct, natural
+{self_knowledge_section}
+## Harsh's info:
+{json.dumps(clean_memory, indent=2) if clean_memory else "No data yet"}
+{prev_conv}{session_section}"""

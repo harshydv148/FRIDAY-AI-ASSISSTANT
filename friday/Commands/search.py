@@ -14,10 +14,19 @@ def web_search(query: str) -> str:
 
         with DDGS() as ddgs:
             # News query hai toh news search use karo
-            if any(n in query.lower() for n in [
-                "news", "latest", "today", "headlines",
-                "score", "result", "winner"
-            ]):
+            if any(
+                n in query.lower()
+                for n in [
+                    "news",
+                    "latest",
+                    "latest news",
+                    "today",
+                    "headlines",
+                    "score",
+                    "result",
+                    "winner",
+                ]
+            ):
                 results = list(ddgs.news(query, max_results=5))
                 if results:
                     context = ""
@@ -74,8 +83,8 @@ def search_and_answer(query: str):
                     },
                     {
                         "role": "user",
-                        "content": f"Give me top news headlines from these results:\n\n{results}"
-                    }
+                        "content": f"Give me top news headlines from these results:\n\n{results}",
+                    },
                 ],
                 max_tokens=150,
             )
@@ -95,44 +104,91 @@ def handle_search_command(user_input: str) -> bool:
     u = user_input.lower().strip()
 
     search_triggers = [
-        "search for", "look up", "find out",
-        "what is the latest", "current price",
-        "live score", "news about", "tell me about",
-        "who won", "what happened", "latest news",
-        "search online", "google karo", "dhundho",
-        "real time", "abhi kya", "aaj ka",
-        "score kya hai", "price kya hai",
-        "weather in", "stock price", "crypto price",
+        "search for",
+        "look up",
+        "find out",
+        "what is the latest",
+        "current price",
+        "live score",
+        "news about",
+        "tell me about",
+        "who won",
+        "what happened",
+        "latest news",
+        "search online",
+        "google karo",
+        "dhundho",
+        "real time",
+        "abhi kya",
+        "aaj ka",
+        "score kya hai",
+        "price kya hai",
+        "weather in",
+        "stock price",
+        "crypto price",
     ]
 
     # Direct search triggers
+    # News specific commands pehle handle karo
+    news_triggers = [
+        "news batao",
+        "news batana",
+        "news chahiye",
+        "aaj ki khabar",
+        "latest news",
+        "news kya hai",
+        "top news",
+        "headlines",
+        "khabar batao",
+    ]
+    if any(t in u for t in news_triggers):
+        search_and_answer("top world news headlines today 2026")
+        return True
+
     if any(t in u for t in search_triggers):
         query = u
         for t in [
-            "search for", "look up", "find out",
-            "search online", "google karo", "dhundho",
-            "friday", "tell me about",
+            "search for",
+            "look up",
+            "find out",
+            "search online",
+            "google karo",
+            "dhundho",
+            "friday",
+            "tell me about",
         ]:
             query = query.replace(t, "").strip()
 
         if query:
-            # News query improve karo
             if any(n in query for n in ["news", "latest", "today", "aaj"]):
-                query = "top world news headlines today June 2026"
+                query = "top world news headlines today 2026"
             search_and_answer(query)
             return True
 
     # Question words — real time info chahiye
     real_time_hints = [
-        "score", "price", "weather", "news",
-        "stock", "crypto", "bitcoin", "ipl",
-        "match", "election", "result", "winner",
-        "latest", "current", "today", "abhi",
-        "rate", "value",
+        "score",
+        "price",
+        "weather",
+        "news",
+        "stock",
+        "crypto",
+        "bitcoin",
+        "ipl",
+        "match",
+        "election",
+        "result",
+        "winner",
+        "latest",
+        "current",
+        "today",
+        "abhi",
+        "rate",
+        "value",
     ]
 
     if any(hint in u for hint in real_time_hints):
         search_and_answer(user_input)
         return True
 
-    return False    
+    return False

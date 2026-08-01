@@ -18,9 +18,22 @@ def _background_listener():
                     try:
                         audio = r.listen(source, timeout=1, phrase_time_limit=3)
                         text = r.recognize_google(audio)
-                        if text:
-                            print(f"⚡ Interrupt detected: {text}")
-                            interrupt_speech()
+                        if text and len(text.split()) <= 3:
+                            # Sirf short commands interrupt karein
+                            # "stop", "friday", "pause" etc
+                            stop_words = [
+                                "stop", "friday",
+                                "ruko", "bas",
+                                "shut up",
+                            ]
+                            # Exact match ya very short command
+                            text_lower = text.lower().strip()
+                            if text_lower in stop_words or (
+                                len(text_lower.split()) <= 2 and
+                                any(w in text_lower for w in stop_words)
+                            ):
+                                print(f"⚡ Interrupt detected: {text}")
+                                interrupt_speech()
                     except:
                         pass
             else:
@@ -231,6 +244,7 @@ while True:
     # SPOTIFY/MUSIC
     if handle_spotify_command(user_input):
         state.touch()
+        time.sleep(5)  # yt-dlp search hone do
         continue
     
     #Git Commands

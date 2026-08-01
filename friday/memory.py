@@ -226,7 +226,7 @@ def get_conversation_history() -> str:
         return "No previous conversations."
 
     lines = []
-    for entry in history[-10:]:  # last 10 conversations
+    for entry in history[-5:]:  # last 5 conversations
         lines.append(
             f"[{entry['time']}] User: {entry['user']} → FRIDAY: {entry['friday']}"
         )

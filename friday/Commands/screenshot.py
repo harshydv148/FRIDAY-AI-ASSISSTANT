@@ -54,8 +54,8 @@ def handle_screenshot_command(user_input: str) -> bool:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         save_path = os.path.join(folder, f"screenshot_{timestamp}.png")
 
-        speak("Taking screenshot in 3 seconds, boss.")
-        time.sleep(3)  # user ko time do window arrange karne ka
+        speak("Taking screenshot in 2 seconds, boss.")
+        time.sleep(2)  # user ko time do window arrange karne ka
 
         path = take_screenshot(save_path)
         print(f"📸 Screenshot saved: {path}")

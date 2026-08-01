@@ -15,6 +15,8 @@ import numpy as np
 import sounddevice as sd
 import speech_recognition as sr
 from dotenv import load_dotenv
+import threading
+
 
 load_dotenv()
 
@@ -22,6 +24,7 @@ PIPER_MODEL = "piper_models/en_US-amy-medium.onnx"
 
 _piper_voice = None
 _mic_disabled = False
+_mic_lock = threading.Lock()
 _speaking = False
 _interrupt_flag = False
 
@@ -142,36 +145,48 @@ def listen(silent: bool = False) -> str | None:
         time.sleep(0.5)
         return None
 
-    r = sr.Recognizer()
-    r.energy_threshold = 300
-    r.dynamic_energy_threshold = True
+    try:
+        r = sr.Recognizer()
+        r.energy_threshold = 300
+        r.dynamic_energy_threshold = True
 
-    with sr.Microphone() as source:
-        r.adjust_for_ambient_noise(source, duration=0.3)
-        if not silent:
-            print("🎤 Listening...")
+        with _mic_lock:
+            with sr.Microphone() as source:
+                r.adjust_for_ambient_noise(source, duration=0.3)
+                if not silent:
+                    print("🎤 Listening...")
+                try:
+                    audio = r.listen(source, timeout=5, phrase_time_limit=10)
+                except sr.WaitTimeoutError:
+                    return None
+
         try:
-            audio = r.listen(source, timeout=5, phrase_time_limit=10)
-        except sr.WaitTimeoutError:
+            text = r.recognize_google(audio)
+
+            # Agar Friday bol rahi thi toh interrupt karo
+            if _speaking:
+                print("⚡ Interrupted!")
+                interrupt_speech()
+
+            return text
+        except sr.UnknownValueError:
+            if not silent:
+                print("Sorry, couldn't understand.")
+            return None
+        except sr.RequestError:
+            print("⚠️ Speech recognition unavailable.")
+            return None
+        except Exception:
             return None
 
-    try:
-        text = r.recognize_google(audio)
-
-        # Agar Friday bol rahi thi toh interrupt karo
-        if _speaking:
-            print("⚡ Interrupted!")
-            interrupt_speech()
-
-        return text
-    except sr.UnknownValueError:
-        if not silent:
-            print("Sorry, couldn't understand.")
+    except AssertionError:
+        time.sleep(0.5)
         return None
-    except sr.RequestError:
-        print("⚠️ Speech recognition unavailable.")
+    except OSError:
+        time.sleep(0.5)
         return None
-    except Exception:
+    except Exception as e:
+        print(f"Listen error: {e}")
         return None
 
 

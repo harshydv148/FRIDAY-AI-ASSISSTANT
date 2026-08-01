@@ -246,6 +246,15 @@ SOLVE_TRIGGERS = [
     "is problem ka solution", "leetcode solve",
 ]
 
+REVIEW_TRIGGERS = [
+    "review this code", "code review karo",
+    "review my code", "check this code",
+    "is code mein kya galat hai", "code check karo",
+    "debug karo", "find bugs", "improve this code",
+    "code improve karo", "suggest improvements",
+    "code ka review karo", "review screen",
+]
+
 GUIDE_TRIGGERS = [
     "help me solve", "guide karo", "guide me",
     "help karo", "samjhao", "explain karo question",
@@ -588,6 +597,94 @@ RULES:
         _start_guide_session(screen_text)
         return True
 
+
+    # CODE REVIEW
+    if any(t in u for t in REVIEW_TRIGGERS):
+        speak("Reviewing your code, give me a moment boss.")
+
+        # Screenshot lo aur Groq Vision se padho
+        try:
+            import pyautogui
+            import base64
+            import tempfile
+
+            # Screenshot
+            screenshot = pyautogui.screenshot()
+            with tempfile.NamedTemporaryFile(
+                suffix=".jpg", delete=False
+            ) as tmp:
+                tmp_path = tmp.name
+                screenshot.save(tmp_path, "JPEG")
+
+            with open(tmp_path, "rb") as f:
+                b64_image = base64.b64encode(f.read()).decode()
+
+            os.remove(tmp_path)
+
+            # Groq Vision se review karo
+            from groq import Groq
+            import os as _os
+            groq_client = Groq(api_key=_os.getenv("GROQ_API_KEY"))
+
+            response = groq_client.chat.completions.create(
+                model="meta-llama/llama-4-scout-17b-16e-instruct",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{b64_image}"
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": """You are a senior developer reviewing code on screen.
+
+Give a natural spoken review — like talking to a junior developer.
+NO bullet points, NO numbered lists, NO headers.
+Just speak naturally in 3-4 sentences covering:
+- Main issue or bug if any
+- One key improvement
+- Overall verdict
+
+Example: "Looks mostly good boss. The main issue is you're not handling edge cases when the array is empty. I'd also rename maxxProfit to maxProfit — typo there. Overall solid DP approach though."
+
+Keep it under 100 words. Conversational tone."""
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=400,
+            )
+
+            review = response.choices[0].message.content
+            print("\n🔍 CODE REVIEW:\n", review)
+
+            # Speakable version
+            import re
+            speakable = re.sub(
+                r'```[\s\S]*?```',
+                'Check terminal for details.',
+                review
+            )
+            speakable = re.sub(r'\*\*(.+?)\*\*', r'\1', speakable)
+            speakable = speakable.strip()
+
+            if len(speakable) > 500:
+                truncated = speakable[:500]
+                last = max(truncated.rfind('.'), truncated.rfind('?'))
+                speakable = truncated[:last+1] if last > 200 else truncated
+
+            speak(speakable)
+
+        except Exception as e:
+            print(f"Code review error: {e}")
+            speak("Couldn't review the code, boss.")
+
+        return True
+    
     return False
 
 

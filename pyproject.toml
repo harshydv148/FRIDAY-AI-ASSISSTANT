@@ -24,6 +24,7 @@ dependencies = [
     "pygame>=2.6.1",
     "pygetwindow>=0.0.9",
     "pyperclip>=1.11.0",
+    "pyqt6>=6.11.0",
     "python-dotenv",
     "pyttsx3>=2.99",
     "pywhatkit>=5.4",

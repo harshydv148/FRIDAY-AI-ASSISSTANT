@@ -52,7 +52,12 @@ def detect_and_handle_intent(user_input: str, memory: dict) -> bool:
             return False
 
         reply = reply[start:end]
-        data = json.loads(reply)
+        
+        try:
+            data = json.loads(reply)
+        except json.JSONDecodeError:
+            # JSON invalid hai — normal conversation mein jaao
+            return False
 
         action = data.get("action")
         target = data.get("target")
