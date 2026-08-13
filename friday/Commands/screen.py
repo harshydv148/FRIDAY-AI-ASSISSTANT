@@ -35,7 +35,7 @@ def handle_explain_screen():
         return
 
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="openai/gpt-oss-20b",
         messages=[
             {"role": "system", "content": SCREEN_EXPLAIN_PROMPT},
             {"role": "user", "content": screen_text},
@@ -55,7 +55,7 @@ def handle_summarize_screen():
         return
 
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="openai/gpt-oss-20b",
         messages=[
             {"role": "system", "content": SCREEN_SUMMARIZE_PROMPT},
             {"role": "user", "content": f"Summarize this screen content:\n\n{screen_text}"},
@@ -180,7 +180,7 @@ def handle_professional_screen():
         return
 
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="openai/gpt-oss-20b",
         messages=[
             {"role": "system", "content": SCREEN_PROFESSIONAL_PROMPT},
             {"role": "user", "content": f"Rewrite this text professionally:\n\n{screen_text}"},
@@ -285,7 +285,7 @@ def _start_guide_session(screen_text: str):
 
     # Pehle problem analyze karo
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="openai/gpt-oss-20b",
         messages=[
             {
                 "role": "system",
@@ -376,7 +376,7 @@ def continue_guide_session(user_input: str) -> bool:
             _guide_session["active"] = False
 
             response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="openai/gpt-oss-20b",
                 messages=[
                     {
                         "role": "system",
@@ -433,7 +433,7 @@ RULES:
     ] + _guide_session["conversation"]
 
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="openai/gpt-oss-20b",
         messages=messages,
     )
 
@@ -503,7 +503,7 @@ def handle_screen_command(user_input: str) -> bool:
             return True
 
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[
                 {
                     "role": "system",
@@ -552,7 +552,7 @@ RULES:
             return True
 
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[
                 {
                     "role": "system",

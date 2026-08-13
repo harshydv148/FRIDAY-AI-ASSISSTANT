@@ -86,14 +86,22 @@ def handle_shortcut(user_input: str, state=None) -> bool:
         return True
     
     # Clear conversation history
-    if any(t in user_input.lower() for t in [
-        "clear history", "history clear karo",
-        "purani baatein bhool jao", "conversation clear"
+    # Clear conversation history
+    if any(t in u for t in [
+        "clear conversation", "clear history",
+        "conversation clear", "history clear",
+        "forget our conversation", "start fresh",
+        "conversation history clear",
     ]):
+        
         from friday.memory import clear_conversation_history
         clear_conversation_history()
-        speak("Done boss, I've cleared our conversation history.")
+        from friday.AI.chat import conversation
+        conversation.clear()
+        speak("Conversation cleared, boss. Fresh start.")
         return True
+
+    
     if handle_greeting(user_input):
         return True
     

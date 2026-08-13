@@ -152,7 +152,7 @@ def extract_and_save(user_input: str) -> bool:
     global memory
 
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="openai/gpt-oss-20b",
         messages=[
             {"role": "system", "content": MEMORY_PROMPT},
             {"role": "user", "content": user_input},

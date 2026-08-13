@@ -8,59 +8,71 @@ from friday.AI.chat import client
 
 
 def web_search(query: str) -> str:
-    """DuckDuckGo se search karo aur result return karo."""
+    """Search karo aur result return karo."""
     try:
         from ddgs import DDGS
 
         with DDGS() as ddgs:
-            # News query hai toh news search use karo
-            if any(
-                n in query.lower()
-                for n in [
-                    "news",
-                    "latest",
-                    "latest news",
-                    "today",
-                    "headlines",
-                    "score",
-                    "result",
-                    "winner",
-                ]
-            ):
-                results = list(ddgs.news(query, max_results=5))
-                if results:
-                    context = ""
-                    for r in results:
-                        context += f"Title: {r['title']}\n"
-                        context += f"Source: {r.get('source', '')}\n"
-                        context += f"Summary: {r.get('body', r.get('excerpt', ''))}\n\n"
-                    return context
+            results = list(ddgs.text(query, max_results=5))
 
-            # Normal search
-            results = list(ddgs.text(query, max_results=3))
-            if not results:
-                return "No results found."
+        if not results:
+            return "No results found."
 
-            context = ""
-            for r in results:
-                context += f"Title: {r['title']}\n"
-                context += f"Info: {r['body']}\n\n"
+        context = ""
+        for r in results:
+            context += f"Title: {r['title']}\n"
+            context += f"Info: {r['body']}\n\n"
 
-            return context
+        return context
 
     except Exception as e:
         print(f"Search error: {e}")
         return "Search failed."
 
 
-def search_and_answer(query: str):
-    """Search karo aur AI se natural answer banao."""
+def fetch_news() -> str:
+    """BBC RSS se live headlines fetch karo."""
+    try:
+        import urllib.request
+        import xml.etree.ElementTree as ET
+
+        url = "http://feeds.bbci.co.uk/news/rss.xml"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            content = response.read()
+
+        root = ET.fromstring(content)
+        channel = root.find("channel")
+
+        headlines = []
+        for item in channel.findall("item")[:6]:
+            title = item.find("title")
+            desc = item.find("description")
+            if title is not None:
+                headline = title.text.strip()
+                description = desc.text.strip() if desc is not None else ""
+                headlines.append(f"- {headline}: {description}")
+
+        if headlines:
+            return "\n".join(headlines)
+        return "No headlines found."
+
+    except Exception as e:
+        print(f"BBC RSS error: {e}")
+        # Fallback to DuckDuckGo
+        return web_search("top world news today")
+
+
+def search_and_answer(query: str, is_news: bool = False):
     print(f"🔍 Searching: {query}")
     speak("Let me look that up, boss.")
 
     def _search():
         try:
-            results = web_search(query)
+            if is_news:
+                results = fetch_news()
+            else:
+                results = web_search(query)
 
             if "failed" in results or "No results" in results:
                 speak("Couldn't find anything, boss.")
@@ -68,7 +80,7 @@ def search_and_answer(query: str):
 
             # AI se natural answer banao
             response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="openai/gpt-oss-20b",
                 messages=[
                     {
                         "role": "system",
@@ -91,7 +103,10 @@ def search_and_answer(query: str):
 
             answer = response.choices[0].message.content.strip()
             print(f"🔍 Answer: {answer}")
-            speak(answer)
+            if answer:
+                speak(answer)
+            else:
+                speak("Couldn't find relevant results, boss.")
 
         except Exception as e:
             print(f"Search answer error: {e}")
@@ -142,7 +157,7 @@ def handle_search_command(user_input: str) -> bool:
         "khabar batao",
     ]
     if any(t in u for t in news_triggers):
-        search_and_answer("top world news headlines today 2026")
+        search_and_answer("news", is_news=True)
         return True
 
     if any(t in u for t in search_triggers):
@@ -181,8 +196,6 @@ def handle_search_command(user_input: str) -> bool:
         "winner",
         "latest",
         "current",
-        "today",
-        "abhi",
         "rate",
         "value",
     ]

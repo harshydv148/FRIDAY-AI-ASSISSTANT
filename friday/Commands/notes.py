@@ -362,6 +362,8 @@ def handle_notes_command(user_input: str) -> bool:
     if any(t in u for t in [
         "delete last note", "last note delete",
         "note delete karo", "pichli note hatao",
+        "delete last", "last delete",
+        "note hatao", "last note hatao",
     ]):
         delete_last_note()
         return True

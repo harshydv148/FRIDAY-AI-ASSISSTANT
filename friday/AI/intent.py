@@ -36,7 +36,7 @@ def detect_and_handle_intent(user_input: str, memory: dict) -> bool:
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[
                 {"role": "system", "content": INTENT_PROMPT},
                 {"role": "user", "content": user_input},

@@ -115,7 +115,7 @@ def handle_type_command(user_input: str) -> bool:
         return True
 
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="openai/gpt-oss-20b",
         messages=[
             {"role": "system", "content": TYPE_PROMPT},
             {"role": "user", "content": f"Type this for me: {type_request}"},

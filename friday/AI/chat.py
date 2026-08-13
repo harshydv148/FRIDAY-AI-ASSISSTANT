@@ -26,23 +26,41 @@ BAD_PHRASES = [
 # Session context — temporary, not saved to memory
 _session_context = ""
 
+
 def set_session_context(context: str):
     global _session_context
     _session_context = context
 
+
 def get_session_context() -> str:
     return _session_context
 
+
 # Queries that need self-knowledge context
 SELF_KNOWLEDGE_TRIGGERS = [
-    "how do you", "how does your", "explain your",
-    "what is your", "how are you built", "your code",
-    "your memory", "your volume", "your intent",
-    "your architecture", "how do reminders", "how do you play",
-    "how does friday", "your features", "what can you",
-    "tell me about yourself", "how do you work",
-    "your implementation", "your modules",
+    "how do you",
+    "how does your",
+    "explain your",
+    "what is your",
+    "how are you built",
+    "your code",
+    "your memory",
+    "your volume",
+    "your intent",
+    "your architecture",
+    "how do reminders",
+    "how do you play",
+    "how does friday",
+    "your features",
+    "what can you",
+    "tell me about yourself",
+    "how do you work",
+    "your implementation",
+    "your modules",
+    "who are you",
+    "introduce yourself",
 ]
+
 
 def _needs_self_knowledge(user_input: str) -> bool:
     u = user_input.lower()
@@ -57,22 +75,23 @@ def chat(user_input: str, memory: dict) -> str:
 
     # History trim karo — MAX_HISTORY pairs rakho
     if len(conversation) > MAX_HISTORY * 2:
-        conversation = conversation[-(MAX_HISTORY * 2):]
+        conversation = conversation[-(MAX_HISTORY * 2) :]
 
     # System prompt — self knowledge conditional
     system_prompt = get_chat_prompt(
-        memory=memory,
-        include_self_knowledge=_needs_self_knowledge(user_input)
+        memory=memory, include_self_knowledge=_needs_self_knowledge(user_input)
     )
 
     # Session context inject karo agar available hai
     messages = [{"role": "system", "content": system_prompt}]
 
     if _session_context:
-        messages.append({
-            "role": "system",
-            "content": f"Current session context: {_session_context}"
-        })
+        messages.append(
+            {
+                "role": "system",
+                "content": f"Current session context: {_session_context}",
+            }
+        )
 
     # History add karo — current message already conversation mein hai
     # Isliye conversation[:-1] use karo — last item current user message hai
@@ -82,9 +101,9 @@ def chat(user_input: str, memory: dict) -> str:
 
     # Models — fallback order
     models = [
-        "llama-3.3-70b-versatile",
-        "llama-3.1-8b-instant",
-        "llama3-8b-8192",
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.6-27b",
     ]
 
     recoverable_errors = (RateLimitError, APITimeoutError)
@@ -148,6 +167,7 @@ def handle_chat(user_input: str, memory: dict) -> bool:
 
     if "write" in user_input.lower() or "type" in user_input.lower():
         import time
+
         time.sleep(1)
         paste_text(reply)
 

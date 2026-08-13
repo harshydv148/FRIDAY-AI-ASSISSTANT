@@ -66,9 +66,10 @@ def _init_gemini():
 
 
 def speak(text: str):
-    """Piper Amy se text speak karo — interruptible."""
-    global _speaking, _interrupt_flag
-
+    """Piper Amy se text speak karo."""
+    if not text or not text.strip():
+        return
+    
     print(f"FRIDAY: {text}")
 
     if _piper_voice is None:
@@ -156,7 +157,7 @@ def listen(silent: bool = False) -> str | None:
                 if not silent:
                     print("🎤 Listening...")
                 try:
-                    audio = r.listen(source, timeout=5, phrase_time_limit=10)
+                    audio = r.listen(source, timeout=5, phrase_time_limit=20)
                 except sr.WaitTimeoutError:
                     return None
 

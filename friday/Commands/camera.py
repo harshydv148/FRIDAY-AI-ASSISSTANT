@@ -22,7 +22,16 @@ def capture_frame() -> str | None:
 
     try:
         if _cap is None or not _cap.isOpened():
-            _cap = cv2.VideoCapture(0)
+            # DirectShow backend use karo Windows pe
+            _cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            
+            if not _cap.isOpened():
+                # Fallback — other indices
+                for idx in range(1, 4):
+                    _cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+                    if _cap.isOpened():
+                        print(f"✅ Camera found at index {idx}")
+                        break
 
         if not _cap.isOpened():
             print("❌ Camera not found")
@@ -32,7 +41,6 @@ def capture_frame() -> str | None:
         if not ret:
             return None
 
-        # JPEG mein convert karo
         _, buffer = cv2.imencode('.jpg', frame)
         b64 = base64.b64encode(buffer).decode('utf-8')
         return b64
@@ -56,7 +64,7 @@ def analyze_frame(prompt: str = "What do you see?") -> str:
         client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
         response = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="qwen/qwen3.6-27b",
             messages=[
                 {
                     "role": "user",
@@ -129,6 +137,7 @@ def handle_camera_command(user_input: str) -> bool:
     custom_triggers = [
         "camera se batao", "camera dekho",
         "webcam se dekho", "camera se dekho",
+        "camera dekhna",
     ]
     for t in custom_triggers:
         if t in u:

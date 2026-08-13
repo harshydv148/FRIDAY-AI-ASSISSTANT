@@ -157,6 +157,8 @@ while True:
         speak("See you Later, boss.")
         break
 
+
+        
     # GUIDE SESSION — active hai toh pehle handle karo
     from friday.Commands.screen import continue_guide_session
     if continue_guide_session(user_input):
