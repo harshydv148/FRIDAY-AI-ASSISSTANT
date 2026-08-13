@@ -152,7 +152,7 @@ def handle_search_command(user_input: str) -> bool:
         "aaj ki khabar",
         "latest news",
         "news kya hai",
-        "top news",
+        "top news","news",
         "headlines",
         "khabar batao",
     ]
